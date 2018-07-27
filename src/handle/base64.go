@@ -16,13 +16,14 @@ func (b *base64) Description() string {
 	return "Base64 encoder/decoder"
 }
 
-func (b *base64) Process(buf []byte, decode bool) ([]byte, error) {
+func (b *base64) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
 	if !decode {
-		return []byte(b64.StdEncoding.EncodeToString(buf)), nil
+		encoded := []byte(b64.StdEncoding.EncodeToString(buf))
+		return encoded, len(encoded), nil
 	}
 	decoded, err := b64.StdEncoding.DecodeString(string(buf))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return decoded, nil
+	return decoded, len(decoded), nil
 }

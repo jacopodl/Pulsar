@@ -14,6 +14,6 @@ func (s *stub) Description() string {
 	return "Do nothing, pass through"
 }
 
-func (s *stub) Process(buf []byte, decode bool) ([]byte, error) {
-	return buf, nil
+func (s *stub) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
+	return buf, length, nil
 }
