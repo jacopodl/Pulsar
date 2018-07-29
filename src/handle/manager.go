@@ -21,6 +21,7 @@ func MakeChain(hnames []string) error {
 	for _, hname := range hnames {
 		if handler, ok := Handlers[hname]; ok {
 			Hchain = append(Hchain, &handler)
+			continue
 		}
 		return fmt.Errorf("handle %s not exists", hname)
 	}

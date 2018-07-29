@@ -18,10 +18,10 @@ func (b *base64) Description() string {
 
 func (b *base64) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
 	if !decode {
-		encoded := []byte(b64.StdEncoding.EncodeToString(buf))
+		encoded := []byte(b64.StdEncoding.EncodeToString(buf[:length]))
 		return encoded, len(encoded), nil
 	}
-	decoded, err := b64.StdEncoding.DecodeString(string(buf))
+	decoded, err := b64.StdEncoding.DecodeString(string(buf[:length]))
 	if err != nil {
 		return nil, 0, err
 	}
