@@ -22,8 +22,8 @@ func (c *console) Stats() *ConnectorStats {
 	return c.ConnectorStats
 }
 
-func (c *console) Connect(listen bool, address string) Connector {
-	return NewConsoleConnector()
+func (c *console) Connect(listen bool, address string) (Connector, error) {
+	return NewConsoleConnector(), nil
 }
 
 func (c *console) Read(buf []byte) ([]byte, int, error) {

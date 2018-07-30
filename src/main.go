@@ -66,7 +66,7 @@ func main() {
 	flag.StringVar(&options.in, "in", "console", "Specify the input connector")
 	flag.StringVar(&options.out, "out", "console", "Specify the output connector")
 	flag.StringVar(&options.handlers, "handlers", "", "Specify data handlers separated by a comma")
-	flag.BoolVar(&options.duplex, "decode", false, "If enabled the data from IN connector will be decoded instead of encoded")
+	flag.BoolVar(&options.decode, "decode", false, "If enabled the data from IN connector will be decoded instead of encoded")
 	flag.BoolVar(&options.duplex, "duplex", false, "Enable two-way data flow")
 	flag.BoolVar(&options.verbose, "v", false, "Enable verbosity")
 	flag.IntVar(&options.buflen, "buffer", 512, "Set the size of the reading buffer")
@@ -78,6 +78,7 @@ func main() {
 
 	// Connectors
 	connect.RegisterConnector(connect.NewConsoleConnector())
+	connect.RegisterConnector(connect.NewTcpConnector())
 
 	flag.Usage = usage
 	flag.Parse()

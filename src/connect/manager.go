@@ -14,7 +14,7 @@ func RegisterConnector(connector Connector) error {
 
 func MakeConnect(cname string, listen bool, address string) (Connector, error) {
 	if cnt, err := Connectors[cname]; err {
-		return cnt.Connect(listen, address), nil
+		return cnt.Connect(listen, address)
 	}
 	return nil, fmt.Errorf("unknown connector %s, aborted", cname)
 }
