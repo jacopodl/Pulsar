@@ -17,9 +17,12 @@ func RegisterHandler(handler Handler) error {
 	return nil
 }
 
-func MakeChain(hnames []string) error {
+func MakeChain(hnames []string, options []string) error {
 	for _, hname := range hnames {
 		if handler, ok := Handlers[hname]; ok {
+			if err := handler.Init(options); err != nil {
+				return err
+			}
 			Hchain = append(Hchain, &handler)
 			continue
 		}

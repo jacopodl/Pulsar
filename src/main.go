@@ -47,12 +47,19 @@ func usage() {
 
 	fmt.Printf("\nBullt-In Handlers:\n")
 	for key, handler := range handle.Handlers {
-		fmt.Printf("\t%s\t%s\n", key, handler.Description())
+		fmt.Printf("%s\t%s\n", key, handler.Description())
+		if opts := handler.Options(); opts != nil {
+			fmt.Println("- Handler options:")
+			for _, opt := range opts {
+				fmt.Printf("  %s=<%s>\n\t%s\n", opt.Name, strings.Join(opt.Values, "|"), opt.Description)
+			}
+			fmt.Println()
+		}
 	}
 
 	fmt.Printf("\nBuit-In Connectors:\n")
 	for key, connector := range connect.Connectors {
-		fmt.Printf("\t%s\t%s\n", key, connector.Description())
+		fmt.Printf("%s\t%s\n", key, connector.Description())
 	}
 }
 
@@ -99,7 +106,7 @@ func main() {
 
 	if options.handlers != "" {
 		tmp := strings.Split(options.handlers, ",")
-		if err := handle.MakeChain(tmp); err != nil {
+		if err := handle.MakeChain(tmp, flag.Args()); err != nil {
 			onError(err)
 		}
 	}

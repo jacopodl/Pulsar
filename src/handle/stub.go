@@ -1,5 +1,7 @@
 package handle
 
+import "stringsop"
+
 type stub struct{}
 
 func NewStub() Handler {
@@ -12,6 +14,14 @@ func (s *stub) Name() string {
 
 func (s *stub) Description() string {
 	return "Do nothing, pass through"
+}
+
+func (s *stub) Init(options []string) error {
+	return nil
+}
+
+func (s *stub) Options() []stringsop.Option {
+	return nil
 }
 
 func (s *stub) Process(buf []byte, length int, decode bool) ([]byte, int, error) {

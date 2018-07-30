@@ -1,6 +1,9 @@
 package handle
 
-import b64 "encoding/base64"
+import (
+	b64 "encoding/base64"
+	"stringsop"
+)
 
 type base64 struct{}
 
@@ -14,6 +17,14 @@ func (b *base64) Name() string {
 
 func (b *base64) Description() string {
 	return "Base64 encoder/decoder"
+}
+
+func (b *base64) Init(options []string) error {
+	return nil
+}
+
+func (b *base64) Options() []stringsop.Option {
+	return nil
 }
 
 func (b *base64) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
