@@ -82,6 +82,7 @@ func main() {
 	// Handlers
 	handle.RegisterHandler(handle.NewStub())
 	handle.RegisterHandler(handle.NewBase64())
+	handle.RegisterHandler(handle.NewCipher())
 
 	// Connectors
 	connect.RegisterConnector(connect.NewConsoleConnector())
