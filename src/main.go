@@ -23,7 +23,6 @@ type Options struct {
 	decode   bool
 	duplex   bool
 	verbose  bool
-	buflen   int
 	delay    int
 }
 
@@ -76,7 +75,6 @@ func main() {
 	flag.BoolVar(&options.decode, "decode", false, "If enabled the data from IN connector will be decoded instead of encoded")
 	flag.BoolVar(&options.duplex, "duplex", false, "Enable two-way data flow")
 	flag.BoolVar(&options.verbose, "v", false, "Enable verbosity")
-	flag.IntVar(&options.buflen, "buffer", 512, "Set the size of the reading buffer")
 	flag.IntVar(&options.delay, "delay", 0, "Delay in millisecond to wait between I/O loop")
 
 	// Handlers
@@ -132,9 +130,8 @@ func main() {
 
 func dataLoop(in *connect.Connector, out *connect.Connector, decode bool, options *Options, wait *sync.WaitGroup) {
 	defer wait.Done()
-	buffer := make([]byte, options.buflen)
 	for {
-		buffer, length, err := (*in).Read(buffer)
+		buffer, length, err := (*in).Read()
 		if err != nil {
 			if err.Error() == "EOF" {
 				return

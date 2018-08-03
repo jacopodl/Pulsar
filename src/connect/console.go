@@ -2,12 +2,15 @@ package connect
 
 import "os"
 
+const CLICHUNK = 4096
+
 type console struct {
 	*ConnectorStats
+	rbuf []byte
 }
 
 func NewConsoleConnector() Connector {
-	return &console{&ConnectorStats{}}
+	return &console{&ConnectorStats{}, nil}
 }
 
 func (c *console) Name() string {
@@ -23,13 +26,16 @@ func (c *console) Stats() *ConnectorStats {
 }
 
 func (c *console) Connect(listen bool, address string) (Connector, error) {
-	return NewConsoleConnector(), nil
+	return &console{&ConnectorStats{}, make([]byte, CLICHUNK)}, nil
 }
 
-func (c *console) Read(buf []byte) ([]byte, int, error) {
-	length, err := os.Stdin.Read(buf)
+func (c *console) Close() {
+}
+
+func (c *console) Read() ([]byte, int, error) {
+	length, err := os.Stdin.Read(c.rbuf)
 	c.recv += length
-	return buf, length, err
+	return c.rbuf, length, err
 }
 
 func (c *console) Write(buf []byte, length int) (int, error) {
