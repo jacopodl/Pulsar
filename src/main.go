@@ -85,6 +85,7 @@ func main() {
 	// Connectors
 	connect.RegisterConnector(connect.NewConsoleConnector())
 	connect.RegisterConnector(connect.NewTcpConnector())
+	connect.RegisterConnector(connect.NewUdpConnector())
 
 	flag.Usage = usage
 	flag.Parse()
