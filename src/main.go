@@ -89,6 +89,13 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	if options.handlers != "" {
+		tmp := strings.Split(options.handlers, ",")
+		if err := handle.MakeChain(tmp, flag.Args()); err != nil {
+			onError(err)
+		}
+	}
+
 	if options.in != "" {
 		connector, address := parseInOutString(options.in)
 		if in, err = connect.MakeConnect(connector, true, address); err != nil {
@@ -99,13 +106,6 @@ func main() {
 	if options.out != "" {
 		connector, address := parseInOutString(options.out)
 		if out, err = connect.MakeConnect(connector, false, address); err != nil {
-			onError(err)
-		}
-	}
-
-	if options.handlers != "" {
-		tmp := strings.Split(options.handlers, ",")
-		if err := handle.MakeChain(tmp, flag.Args()); err != nil {
 			onError(err)
 		}
 	}
@@ -128,7 +128,7 @@ func main() {
 	}
 }
 
-func dataLoop(in *connect.Connector, out *connect.Connector, decode bool, options *Options, wait *sync.WaitGroup) {
+func dataLoop(in, out *connect.Connector, decode bool, options *Options, wait *sync.WaitGroup) {
 	defer wait.Done()
 	for {
 		buffer, length, err := (*in).Read()
