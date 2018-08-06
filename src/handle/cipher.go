@@ -3,30 +3,38 @@ package handle
 import (
 	"stringsop"
 	"io"
+	"crypto/cipher"
+	"crypto/aes"
+	"crypto/des"
+	"math/rand"
+	"fmt"
+	"time"
 )
 
-type cipher struct {
+type cipherSt struct {
 	options []stringsop.Option
 	cipher  string
-	key     string
+	block   cipher.Block
 }
 
 func NewCipher() Handler {
-	return &cipher{[]stringsop.Option{
+	return &cipherSt{[]stringsop.Option{
 		{"cipher", []string{"aes", "des", "tdes"}, "aes", "Set cipher type"},
 		{"cipher-key", nil, "", "Set cipher key"}},
-		"", ""}
+		"", nil}
 }
 
-func (c *cipher) Name() string {
+func (c *cipherSt) Name() string {
 	return "cipher"
 }
 
-func (c *cipher) Description() string {
+func (c *cipherSt) Description() string {
 	return "The cipher! (AES,DES,TDES)"
 }
 
-func (c *cipher) Init(options []string) error {
+func (c *cipherSt) Init(options []string) error {
+	var cipher_key = ""
+	var err error = nil
 	parser := stringsop.NewStringsOp(options, c.options)
 	for {
 		key, value, err := parser.Next()
@@ -40,16 +48,46 @@ func (c *cipher) Init(options []string) error {
 		case "cipher":
 			c.cipher = value
 		case "cipher-key":
-			c.key = key
+			cipher_key = value
 		}
 	}
-	return nil
+	switch c.cipher {
+	case "aes":
+		c.block, err = aes.NewCipher([]byte(cipher_key))
+	case "des":
+		c.block, err = des.NewCipher([]byte(cipher_key))
+	case "tdes":
+		c.block, err = des.NewTripleDESCipher([]byte(cipher_key))
+	}
+	return err
 }
 
-func (c *cipher) Options() []stringsop.Option {
+func (c *cipherSt) Options() []stringsop.Option {
 	return c.options
 }
 
-func (c *cipher) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
-	return buf, length, nil
+func (c *cipherSt) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
+	buf, err := c.processCTR(buf[:length], decode)
+	return buf, len(buf), err
+}
+
+func (c *cipherSt) processCTR(data []byte, decrypt bool) ([]byte, error) {
+	if ! decrypt {
+		ciphertext := make([]byte, c.block.BlockSize()+len(data))
+		iv := ciphertext[:c.block.BlockSize()]
+		rand.Seed(time.Now().UnixNano())
+		if _, err := rand.Read(iv); err != nil {
+			return nil, err
+		}
+		stream := cipher.NewCTR(c.block, iv)
+		stream.XORKeyStream(ciphertext[c.block.BlockSize():], data)
+		fmt.Println(ciphertext)
+		return ciphertext, nil
+	}
+	fmt.Println(data)
+	plaintext := make([]byte, len(data)-c.block.BlockSize())
+	iv := data[:c.block.BlockSize()]
+	stream := cipher.NewCTR(c.block, iv)
+	stream.XORKeyStream(plaintext, data[c.block.BlockSize():])
+	return plaintext, nil
 }
