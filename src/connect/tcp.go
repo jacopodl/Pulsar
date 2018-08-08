@@ -23,7 +23,7 @@ func (t *tcp) Name() string {
 }
 
 func (t *tcp) Description() string {
-	return "Read/write from TCP"
+	return "Read/write from TCP stream"
 }
 
 func (t *tcp) Stats() *ConnectorStats {
@@ -84,21 +84,18 @@ func (t *tcp) Read() ([]byte, int, error) {
 }
 
 func (t *tcp) Write(buf []byte, length int) (int, error) {
-	var total = 0
-
 	pkts, err := packet.MakePackets(buf, length, TCPCHUNK, 0)
 	if err != nil {
 		return 0, err
 	}
 
 	for i := range pkts {
-		wl, err := t.conn.Write(packet.SerializePacket(pkts[i]))
+		_, err := t.conn.Write(packet.SerializePacket(pkts[i]))
 		if err != nil {
 			return 0, err
 		}
-		t.send += wl
-		total += wl
+		t.send += length
 	}
 
-	return total, nil
+	return length, nil
 }

@@ -25,7 +25,7 @@ func (u *udp) Name() string {
 }
 
 func (u *udp) Description() string {
-	return "Read/write from udp"
+	return "Read/write from UDP packets"
 }
 
 func (u *udp) Stats() *ConnectorStats {
@@ -83,13 +83,9 @@ func (u *udp) Read() ([]byte, int, error) {
 		}
 		if u.connHost == nil {
 			u.connHost = addr
-			println("setuphost")
 		}
 		if !u.connHost.IP.Equal(addr.IP) || u.connHost.Port != addr.Port {
 			continue
-			println("jmp")
-			println(u.connHost)
-			println(addr)
 		}
 		pkt, err := packet.DeserializePacket(u.rbuf, length)
 		if err != nil {
@@ -106,10 +102,7 @@ func (u *udp) Read() ([]byte, int, error) {
 }
 
 func (u *udp) Write(buf []byte, length int) (int, error) {
-	var total = 0
-
 	if u.connHost == nil {
-		println("nil")
 		return 0, nil
 	}
 
@@ -119,13 +112,12 @@ func (u *udp) Write(buf []byte, length int) (int, error) {
 	}
 
 	for i := range pkts {
-		wl, err := u.conn.WriteToUDP(packet.SerializePacket(pkts[i]), u.connHost)
+		_, err := u.conn.WriteToUDP(packet.SerializePacket(pkts[i]), u.connHost)
 		if err != nil {
 			return 0, err
 		}
-		u.send += wl
-		total += wl
+		u.send += length
 	}
 
-	return total, nil
+	return length, nil
 }

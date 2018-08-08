@@ -7,7 +7,6 @@ import (
 	"crypto/aes"
 	"crypto/des"
 	"math/rand"
-	"fmt"
 	"time"
 )
 
@@ -81,10 +80,8 @@ func (c *cipherSt) processCTR(data []byte, decrypt bool) ([]byte, error) {
 		}
 		stream := cipher.NewCTR(c.block, iv)
 		stream.XORKeyStream(ciphertext[c.block.BlockSize():], data)
-		fmt.Println(ciphertext)
 		return ciphertext, nil
 	}
-	fmt.Println(data)
 	plaintext := make([]byte, len(data)-c.block.BlockSize())
 	iv := data[:c.block.BlockSize()]
 	stream := cipher.NewCTR(c.block, iv)
