@@ -41,24 +41,24 @@ func parseInOutString(value string) (connector string, address string) {
 }
 
 func usage() {
-	fmt.Printf("%s, Version: %s\n", APP, VERSION)
+	fmt.Fprintf(os.Stderr, "%s, Version: %s\n", APP, VERSION)
 	flag.PrintDefaults()
 
-	fmt.Printf("\nBullt-In Handlers:\n")
+	fmt.Fprintf(os.Stderr, "\nBullt-In Handlers:\n")
 	for key, handler := range handle.Handlers {
-		fmt.Printf("%s\t%s\n", key, handler.Description())
+		fmt.Fprintf(os.Stderr, "%s\n\t%s\n", key, handler.Description())
 		if opts := handler.Options(); opts != nil {
-			fmt.Println("- Handler options:")
+			fmt.Fprintf(os.Stderr, "* OPTIONS:\n")
 			for _, opt := range opts {
-				fmt.Printf("  %s=<%s>\n\t%s\n", opt.Name, strings.Join(opt.Values, "|"), opt.Description)
+				fmt.Fprintf(os.Stderr, "  %s\n\t%s\n", opt.String(), opt.Description)
 			}
 			fmt.Println()
 		}
 	}
 
-	fmt.Printf("\nBuit-In Connectors:\n")
+	fmt.Fprintf(os.Stderr, "\nBuit-In Connectors:\n")
 	for key, connector := range connect.Connectors {
-		fmt.Printf("%s\t%s\n", key, connector.Description())
+		fmt.Fprintf(os.Stderr, "%s\n\t%s\n", key, connector.Description())
 	}
 }
 
