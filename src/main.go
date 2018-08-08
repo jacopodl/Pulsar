@@ -20,6 +20,9 @@ type Options struct {
 	in       string
 	out      string
 	handlers string
+	plain    string
+	inplain  bool
+	outplain bool
 	decode   bool
 	duplex   bool
 	verbose  bool
@@ -69,11 +72,12 @@ func main() {
 	var err error = nil
 	var wait sync.WaitGroup
 
-	flag.StringVar(&options.in, "in", "console", "Specify the input connector")
-	flag.StringVar(&options.out, "out", "console", "Specify the output connector")
-	flag.StringVar(&options.handlers, "handlers", "", "Specify data handlers separated by a comma")
 	flag.BoolVar(&options.decode, "decode", false, "If enabled the data from IN connector will be decoded instead of encoded")
 	flag.BoolVar(&options.duplex, "duplex", false, "Enable two-way data flow")
+	flag.StringVar(&options.handlers, "handlers", "", "Specify data handlers separated by a comma")
+	flag.StringVar(&options.in, "in", "console", "Specify the input connector")
+	flag.StringVar(&options.out, "out", "console", "Specify the output connector")
+	flag.StringVar(&options.plain, "plain", "", "Specifies the directions which must use a plain connector")
 	flag.BoolVar(&options.verbose, "v", false, "Enable verbosity")
 	flag.IntVar(&options.delay, "delay", 0, "Delay in millisecond to wait between I/O loop")
 
@@ -90,6 +94,20 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	if options.plain != "" {
+		tmp := strings.Split(options.plain, ",")
+		for i := range tmp {
+			switch tmp[i] {
+			case "in":
+				options.inplain = true
+			case "out":
+				options.outplain = true
+			default:
+				onError(fmt.Errorf("%s is an invalid direction, you must use only 'in'/'out'", tmp[i]))
+			}
+		}
+	}
+
 	if options.handlers != "" {
 		tmp := strings.Split(options.handlers, ",")
 		if err := handle.MakeChain(tmp, flag.Args()); err != nil {
@@ -99,14 +117,14 @@ func main() {
 
 	if options.in != "" {
 		connector, address := parseInOutString(options.in)
-		if in, err = connect.MakeConnect(connector, true, address); err != nil {
+		if in, err = connect.MakeConnect(connector, true, options.inplain, address); err != nil {
 			onError(err)
 		}
 	}
 
 	if options.out != "" {
 		connector, address := parseInOutString(options.out)
-		if out, err = connect.MakeConnect(connector, false, address); err != nil {
+		if out, err = connect.MakeConnect(connector, false, options.outplain, address); err != nil {
 			onError(err)
 		}
 	}

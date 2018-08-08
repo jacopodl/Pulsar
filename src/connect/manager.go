@@ -12,9 +12,9 @@ func RegisterConnector(connector Connector) error {
 	return nil
 }
 
-func MakeConnect(cname string, listen bool, address string) (Connector, error) {
+func MakeConnect(cname string, listen, plain bool, address string) (Connector, error) {
 	if cnt, err := Connectors[cname]; err {
-		return cnt.Connect(listen, address)
+		return cnt.Connect(listen, plain, address)
 	}
 	return nil, fmt.Errorf("unknown connector %s, aborted", cname)
 }

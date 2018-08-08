@@ -10,12 +10,13 @@ const TCPCHUNK = 1320
 type tcp struct {
 	*ConnectorStats
 	*packet.Queue
-	conn net.Conn
-	rbuf []byte
+	plain bool
+	conn  net.Conn
+	rbuf  []byte
 }
 
 func NewTcpConnector() Connector {
-	return &tcp{&ConnectorStats{}, nil, nil, nil}
+	return &tcp{&ConnectorStats{}, nil, false, nil, nil}
 }
 
 func (t *tcp) Name() string {
@@ -30,7 +31,7 @@ func (t *tcp) Stats() *ConnectorStats {
 	return t.ConnectorStats
 }
 
-func (t *tcp) Connect(listen bool, address string) (Connector, error) {
+func (t *tcp) Connect(listen, plain bool, address string) (Connector, error) {
 	var err error = nil
 	var conn net.Conn = nil
 	if listen {
@@ -39,6 +40,7 @@ func (t *tcp) Connect(listen bool, address string) (Connector, error) {
 			if conn, err = ln.Accept(); err == nil {
 				return &tcp{&ConnectorStats{},
 					packet.NewQueue(),
+					plain,
 					conn,
 					make([]byte, TCPCHUNK)}, nil
 			}
@@ -48,6 +50,7 @@ func (t *tcp) Connect(listen bool, address string) (Connector, error) {
 	if conn, err = net.Dial(t.Name(), address); err == nil {
 		return &tcp{&ConnectorStats{},
 			packet.NewQueue(),
+			plain,
 			conn,
 			make([]byte, TCPCHUNK)}, nil
 	}
@@ -68,6 +71,10 @@ func (t *tcp) Read() ([]byte, int, error) {
 		if length == 0 {
 			return nil, 0, err
 		}
+		if t.plain {
+			t.recv = length
+			return t.rbuf, length, nil
+		}
 		pkt, err := packet.DeserializePacket(t.rbuf, length)
 		if err != nil {
 			return nil, 0, err
@@ -84,18 +91,23 @@ func (t *tcp) Read() ([]byte, int, error) {
 }
 
 func (t *tcp) Write(buf []byte, length int) (int, error) {
-	pkts, err := packet.MakePackets(buf, length, TCPCHUNK, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	for i := range pkts {
-		_, err := t.conn.Write(packet.SerializePacket(pkts[i]))
+	if !t.plain {
+		pkts, err := packet.MakePackets(buf, length, TCPCHUNK, 0)
 		if err != nil {
 			return 0, err
 		}
-		t.send += length
+		for i := range pkts {
+			_, err := t.conn.Write(packet.SerializePacket(pkts[i]))
+			if err != nil {
+				return 0, err
+			}
+		}
+	} else {
+		_, err := t.conn.Write(buf[:length])
+		if err != nil {
+			return 0, err
+		}
 	}
-
+	t.send += length
 	return length, nil
 }

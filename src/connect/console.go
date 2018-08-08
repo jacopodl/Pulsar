@@ -25,7 +25,7 @@ func (c *console) Stats() *ConnectorStats {
 	return c.ConnectorStats
 }
 
-func (c *console) Connect(listen bool, address string) (Connector, error) {
+func (c *console) Connect(listen, plain bool, address string) (Connector, error) {
 	return &console{&ConnectorStats{}, make([]byte, CLICHUNK)}, nil
 }
 
