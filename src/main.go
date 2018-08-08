@@ -121,11 +121,11 @@ func main() {
 	wait.Wait()
 
 	if options.verbose {
-		fmt.Printf("\nStats:\n")
-		fmt.Printf("- IN connector(%s):\n", in.Name())
-		fmt.Printf("  %s\n\n", in.Stats())
-		fmt.Printf("- OUT connector(%s):\n", out.Name())
-		fmt.Printf("  %s\n", out.Stats())
+		fmt.Fprintf(os.Stderr, "\nStats:\n")
+		fmt.Fprintf(os.Stderr, "- IN connector(%s):\n", in.Name())
+		fmt.Fprintf(os.Stderr, "  %s\n\n", in.Stats())
+		fmt.Fprintf(os.Stderr, "- OUT connector(%s):\n", out.Name())
+		fmt.Fprintf(os.Stderr, "  %s\n", out.Stats())
 	}
 }
 
