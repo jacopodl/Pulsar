@@ -90,6 +90,7 @@ func main() {
 	connect.RegisterConnector(connect.NewConsoleConnector())
 	connect.RegisterConnector(connect.NewTcpConnector())
 	connect.RegisterConnector(connect.NewUdpConnector())
+	connect.RegisterConnector(connect.NewIcmpConnector())
 
 	flag.Usage = usage
 	flag.Parse()
