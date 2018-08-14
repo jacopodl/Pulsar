@@ -13,6 +13,7 @@ const ICMPPKT = 1500 - 20 - 8
 
 type icmp struct {
 	*ConnectorStats
+	*packet.Factory
 	*packet.Queue
 	conn   *gicmp.PacketConn
 	gblseq int
@@ -22,7 +23,15 @@ type icmp struct {
 }
 
 func NewIcmpConnector() Connector {
-	return &icmp{&ConnectorStats{}, nil, nil, 1, "", -1, nil}
+	return &icmp{
+		&ConnectorStats{},
+		nil,
+		nil,
+		nil,
+		1,
+		"",
+		-1,
+		nil}
 }
 
 func (i *icmp) Name() string {
@@ -51,7 +60,10 @@ func (i *icmp) Connect(listen, plain bool, address string) (Connector, error) {
 		return nil, err
 	}
 
+	pktFactory, _ := packet.NewPacketFactory(ICMPCHUNK, uint32(os.Getpid()&0xFFFF))
+
 	return &icmp{&ConnectorStats{},
+		pktFactory,
 		packet.NewQueue(),
 		conn,
 		1,
@@ -93,7 +105,7 @@ func (i *icmp) Read() ([]byte, int, error) {
 			if i.rid != echo.ID {
 				continue
 			}
-			pkt, err := packet.DeserializePacket(echo.Data, length)
+			pkt, err := i.Deserialize(echo.Data, length)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -113,7 +125,7 @@ func (i *icmp) Write(buf []byte, length int) (int, error) {
 		return 0, nil
 	}
 
-	pkts, err := packet.MakePackets(buf, length, ICMPCHUNK, uint32(os.Getpid()&0xFFFF))
+	pkts, err := i.Buffer2pkts(buf, length)
 	if err != nil {
 		return 0, err
 	}
@@ -122,7 +134,7 @@ func (i *icmp) Write(buf []byte, length int) (int, error) {
 			Type: ipv4.ICMPTypeEcho, Code: 0,
 			Body: &gicmp.Echo{
 				ID:   os.Getpid() & 0xFFFF, Seq: i.gblseq,
-				Data: packet.SerializePacket(pkts[j])}}
+				Data: pkts[j].Serialize()}}
 		wb, err := wm.Marshal(nil)
 		if err != nil {
 			return 0, err

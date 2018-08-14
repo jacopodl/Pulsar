@@ -9,6 +9,7 @@ const TCPCHUNK = 1320
 
 type tcp struct {
 	*ConnectorStats
+	*packet.Factory
 	*packet.Queue
 	plain bool
 	conn  net.Conn
@@ -16,7 +17,7 @@ type tcp struct {
 }
 
 func NewTcpConnector() Connector {
-	return &tcp{&ConnectorStats{}, nil, false, nil, nil}
+	return &tcp{&ConnectorStats{}, nil, nil, false, nil, nil}
 }
 
 func (t *tcp) Name() string {
@@ -34,27 +35,29 @@ func (t *tcp) Stats() *ConnectorStats {
 func (t *tcp) Connect(listen, plain bool, address string) (Connector, error) {
 	var err error = nil
 	var conn net.Conn = nil
+
 	if listen {
 		var ln net.Listener = nil
-		if ln, err = net.Listen(t.Name(), address); err == nil {
-			if conn, err = ln.Accept(); err == nil {
-				return &tcp{&ConnectorStats{},
-					packet.NewQueue(),
-					plain,
-					conn,
-					make([]byte, TCPCHUNK)}, nil
-			}
+		if ln, err = net.Listen(t.Name(), address); err != nil {
+			return nil, err
 		}
-		return nil, err
+		if conn, err = ln.Accept(); err != nil {
+			return nil, err
+		}
+	} else {
+		if conn, err = net.Dial(t.Name(), address); err != nil {
+			return nil, err
+		}
 	}
-	if conn, err = net.Dial(t.Name(), address); err == nil {
-		return &tcp{&ConnectorStats{},
-			packet.NewQueue(),
-			plain,
-			conn,
-			make([]byte, TCPCHUNK)}, nil
-	}
-	return nil, err
+
+	pktFactory, _ := packet.NewPacketFactory(TCPCHUNK, 0)
+
+	return &tcp{&ConnectorStats{},
+		pktFactory,
+		packet.NewQueue(),
+		plain,
+		conn,
+		make([]byte, TCPCHUNK)}, nil
 }
 
 func (t *tcp) Close() {
@@ -75,7 +78,7 @@ func (t *tcp) Read() ([]byte, int, error) {
 			t.recv = length
 			return t.rbuf, length, nil
 		}
-		pkt, err := packet.DeserializePacket(t.rbuf, length)
+		pkt, err := t.Deserialize(t.rbuf, length)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -92,12 +95,12 @@ func (t *tcp) Read() ([]byte, int, error) {
 
 func (t *tcp) Write(buf []byte, length int) (int, error) {
 	if !t.plain {
-		pkts, err := packet.MakePackets(buf, length, TCPCHUNK, 0)
+		pkts, err := t.Buffer2pkts(buf, length)
 		if err != nil {
 			return 0, err
 		}
 		for i := range pkts {
-			_, err := t.conn.Write(packet.SerializePacket(pkts[i]))
+			_, err := t.conn.Write(pkts[i].Serialize())
 			if err != nil {
 				return 0, err
 			}

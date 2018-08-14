@@ -4,12 +4,14 @@ import (
 	"packet"
 	"net"
 	"strconv"
+	"os"
 )
 
 const UDPCHUNK = 384
 
 type udp struct {
 	*ConnectorStats
+	*packet.Factory
 	*packet.Queue
 	plain    bool
 	conn     *net.UDPConn
@@ -18,7 +20,7 @@ type udp struct {
 }
 
 func NewUdpConnector() Connector {
-	return &udp{&ConnectorStats{}, nil, false, nil, nil, nil}
+	return &udp{&ConnectorStats{}, nil, nil, false, nil, nil, nil}
 }
 
 func (u *udp) Name() string {
@@ -61,7 +63,10 @@ func (u *udp) Connect(listen, plain bool, address string) (Connector, error) {
 		return nil, err
 	}
 
+	pktFactory, _ := packet.NewPacketFactory(UDPCHUNK, uint32(os.Getpid()))
+
 	return &udp{&ConnectorStats{},
+		pktFactory,
 		packet.NewQueue(),
 		plain,
 		conn,
@@ -93,7 +98,7 @@ func (u *udp) Read() ([]byte, int, error) {
 			u.recv = length
 			return u.rbuf, length, nil
 		}
-		pkt, err := packet.DeserializePacket(u.rbuf, length)
+		pkt, err := u.Deserialize(u.rbuf, length)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -113,12 +118,12 @@ func (u *udp) Write(buf []byte, length int) (int, error) {
 	}
 
 	if !u.plain {
-		pkts, err := packet.MakePackets(buf, length, TCPCHUNK, 0)
+		pkts, err := u.Buffer2pkts(buf, length)
 		if err != nil {
 			return 0, err
 		}
 		for i := range pkts {
-			_, err := u.conn.WriteToUDP(packet.SerializePacket(pkts[i]), u.connHost)
+			_, err := u.conn.WriteToUDP(pkts[i].Serialize(), u.connHost)
 			if err != nil {
 				return 0, err
 			}
