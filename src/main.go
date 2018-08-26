@@ -91,6 +91,7 @@ func main() {
 	connect.RegisterConnector(connect.NewTcpConnector())
 	connect.RegisterConnector(connect.NewUdpConnector())
 	connect.RegisterConnector(connect.NewIcmpConnector())
+	connect.RegisterConnector(connect.NewDnsConnector())
 
 	flag.Usage = usage
 	flag.Parse()
