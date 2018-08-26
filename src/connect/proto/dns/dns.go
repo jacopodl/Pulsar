@@ -39,6 +39,63 @@ func NewDnsPacket(id uint16) *Dns {
 	return &packet
 }
 
+func Deserialize(buf []byte) *Dns {
+	pkt := Dns{}
+
+	pkt.Id = binary.BigEndian.Uint16(buf[:2])
+	pkt.Info = binary.BigEndian.Uint16(buf[2:4])
+	pkt.TotalQuestions = binary.BigEndian.Uint16(buf[4:6])
+	pkt.TotalAnswers = binary.BigEndian.Uint16(buf[6:8])
+	pkt.TotalAuthority = binary.BigEndian.Uint16(buf[8:10])
+	pkt.TotalAdditional = binary.BigEndian.Uint16(buf[10:])
+
+	pkt.Data = append([]byte{}, buf[12:]...)
+	return &pkt
+}
+
+func dname2qname(dname string) []byte {
+	var ins = 0
+	var count byte = 0
+	var i = 0
+	var qname = make([]byte, len(dname)+2)
+
+	for i = range dname {
+		if dname[i] == '.' {
+			qname[ins] = count
+			ins = i + 1
+			count = 0
+			continue
+		}
+		qname[i+1] = dname[i]
+		count++
+	}
+
+	qname[ins] = count
+	qname[i+2] = 0x00
+	return qname
+}
+
+func getQuestion(buf []byte, start uint16) ([]string, uint16) {
+	var question []string
+	var last uint16 = 0
+	for lr := uint16(buf[start]); lr != 0; lr = uint16(buf[start]) {
+		start ++
+		if lr&0xC0 == 0xC0 {
+			if last == 0 {
+				last = start + 5
+			}
+			start = uint16(buf[start]) - 12
+			continue
+		}
+		question = append(question, string(buf[start:start+lr]))
+		start += lr
+	}
+	if last == 0 {
+		last = start + 5
+	}
+	return question, last
+}
+
 func (d *Dns) AddQuestion(dname string, qtype uint16, qclass uint16) {
 	query := Query{qtype, qclass}
 	qname := dname2qname(dname)
@@ -136,61 +193,4 @@ func (d *Dns) Serialize() []byte {
 
 	data = append(data, d.Data...)
 	return data
-}
-
-func Deserialize(buf []byte) *Dns {
-	pkt := Dns{}
-
-	pkt.Id = binary.BigEndian.Uint16(buf[:2])
-	pkt.Info = binary.BigEndian.Uint16(buf[2:4])
-	pkt.TotalQuestions = binary.BigEndian.Uint16(buf[4:6])
-	pkt.TotalAnswers = binary.BigEndian.Uint16(buf[6:8])
-	pkt.TotalAuthority = binary.BigEndian.Uint16(buf[8:10])
-	pkt.TotalAdditional = binary.BigEndian.Uint16(buf[10:])
-
-	pkt.Data = append([]byte{}, buf[12:]...)
-	return &pkt
-}
-
-func dname2qname(dname string) []byte {
-	var ins = 0
-	var count byte = 0
-	var i = 0
-	var qname = make([]byte, len(dname)+2)
-
-	for i = range dname {
-		if dname[i] == '.' {
-			qname[ins] = count
-			ins = i + 1
-			count = 0
-			continue
-		}
-		qname[i+1] = dname[i]
-		count++
-	}
-
-	qname[ins] = count
-	qname[i+2] = 0x00
-	return qname
-}
-
-func getQuestion(buf []byte, start uint16) ([]string, uint16) {
-	var question []string
-	var last uint16 = 0
-	for lr := uint16(buf[start]); lr != 0; lr = uint16(buf[start]) {
-		start ++
-		if lr&0xC0 == 0xC0 {
-			if last == 0 {
-				last = start + 5
-			}
-			start = uint16(buf[start]) - 12
-			continue
-		}
-		question = append(question, string(buf[start:start+lr]))
-		start += lr
-	}
-	if last == 0 {
-		last = start + 5
-	}
-	return question, last
 }

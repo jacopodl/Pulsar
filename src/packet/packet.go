@@ -22,39 +22,34 @@ func NewPacket(bseq, seq, tlen uint32, data []byte) *Packet {
 		data}
 }
 
-func (p *Packet) Serialize() []byte {
-	bseq := make([]byte, 4)
-	seq := make([]byte, 4)
-	tlen := make([]byte, 4)
-
-	// To network byte order
-	binary.BigEndian.PutUint32(bseq, p.BSeq)
-	binary.BigEndian.PutUint32(seq, p.Seq)
-	binary.BigEndian.PutUint32(tlen, p.Tlen)
-
-	buffer := append([]byte{}, bseq...)
-	buffer = append(buffer, seq...)
-	buffer = append(buffer, tlen...)
-	buffer = append(buffer, p.Data...)
-
-	return buffer
-}
-
-func (p *Packet) String() string {
-	return fmt.Sprintf("Bseq: %d, Seq: %d, Total: %d, bytes: %x", p.BSeq, p.Seq, p.Tlen, p.Data)
-}
-
 func Deserialize(buf []byte, buflen int) (*Packet, error) {
 	if buflen < HDRSIZE {
 		return nil, fmt.Errorf("malformed packet")
 	}
 
 	// From network byte order
-	bseq := binary.BigEndian.Uint32(buf[0:4])
+	bseq := binary.BigEndian.Uint32(buf[:4])
 	seq := binary.BigEndian.Uint32(buf[4:8])
-	tlen := binary.BigEndian.Uint32(buf[8:12])
+	tlen := binary.BigEndian.Uint32(buf[8:])
 
 	packet := NewPacket(bseq, seq, tlen, append([]byte{}, buf[HDRSIZE:]...))
 
 	return packet, nil
+}
+
+func (p *Packet) Serialize() []byte {
+	hdr := make([]byte, HDRSIZE)
+
+	// To network byte order
+	binary.BigEndian.PutUint32(hdr[:4], p.BSeq)
+	binary.BigEndian.PutUint32(hdr[4:8], p.Seq)
+	binary.BigEndian.PutUint32(hdr[8:], p.Tlen)
+
+	hdr = append(hdr, p.Data...)
+
+	return hdr
+}
+
+func (p *Packet) String() string {
+	return fmt.Sprintf("Bseq: %d, Seq: %d, Total: %d, bytes: %x", p.BSeq, p.Seq, p.Tlen, p.Data)
 }
