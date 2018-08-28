@@ -18,7 +18,7 @@ func (q *Queue) Add(packet *Packet) {
 	if packet.Seq < q.queue[len(q.queue)-1].Seq {
 		// Sort pkt by seq number
 		sort.Slice(q.queue, func(i, j int) bool {
-			return q.queue[i].Seq < q.queue[i].Seq
+			return q.queue[i].Seq < q.queue[j].Seq
 		})
 	}
 }
@@ -27,6 +27,7 @@ func (q *Queue) Buffer() ([]byte, bool) {
 	var buf []byte = nil
 	var bseq uint32 = 0
 	var lastlen uint32 = 0
+	var tlen uint32 = 0
 	var lastpkt = -1
 	var ok = false
 
@@ -43,7 +44,9 @@ func (q *Queue) Buffer() ([]byte, bool) {
 			break
 		}
 
-		if pkt.Seq-bseq == pkt.Tlen {
+		tlen += (pkt.Seq - bseq) - tlen
+
+		if tlen == pkt.Tlen {
 			// We have all data! :)
 			lastpkt = i
 			break

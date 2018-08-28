@@ -1,11 +1,11 @@
 package connect
 
 import (
-	"packet"
 	gicmp "golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"net"
 	"os"
+	"packet"
 )
 
 const ICMPCHUNK = 128
@@ -97,7 +97,7 @@ func (i *icmp) Read() ([]byte, int, error) {
 			return nil, 0, err
 		}
 
-		if rm.Type == ipv4.ICMPTypeEchoReply {
+		if rm.Type == ipv4.ICMPTypeEcho {
 			echo := rm.Body.(*gicmp.Echo)
 			if i.rid == -1 && echo.ID != os.Getpid()&0xFFFF {
 				i.rid = echo.ID
@@ -105,7 +105,7 @@ func (i *icmp) Read() ([]byte, int, error) {
 			if i.rid != echo.ID {
 				continue
 			}
-			pkt, err := i.Deserialize(echo.Data, length)
+			pkt, err := i.Deserialize(echo.Data, ICMPCHUNK)
 			if err != nil {
 				return nil, 0, err
 			}
