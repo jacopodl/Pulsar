@@ -3,6 +3,7 @@ package connect
 import (
 	"net"
 	"packet"
+	"os"
 )
 
 const TCPCHUNK = 1320
@@ -50,9 +51,10 @@ func (t *tcp) Connect(listen, plain bool, address string) (Connector, error) {
 		}
 	}
 
-	pktFactory, _ := packet.NewPacketFactory(TCPCHUNK, 0)
+	pktFactory, _ := packet.NewPacketFactory(TCPCHUNK, uint32(os.Getpid()))
 
-	return &tcp{&ConnectorStats{},
+	return &tcp{
+		&ConnectorStats{},
 		pktFactory,
 		packet.NewQueue(),
 		plain,
@@ -94,23 +96,40 @@ func (t *tcp) Read() ([]byte, int, error) {
 }
 
 func (t *tcp) Write(buf []byte, length int) (int, error) {
-	if !t.plain {
-		pkts, err := t.Buffer2pkts(buf, length)
-		if err != nil {
-			return 0, err
-		}
+	var err error = nil
+
+	if t.plain {
+		length, err = t.writePlain(buf, length)
+	} else {
+		length, err = t.write(buf, length)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	t.send += length
+	return length, nil
+}
+
+func (t *tcp) write(buf []byte, length int) (int, error) {
+	var pkts []*packet.Packet
+	var err error = nil
+
+	if pkts, err = t.Buffer2pkts(buf, length); err == nil {
 		for i := range pkts {
-			_, err := t.conn.Write(pkts[i].Serialize())
-			if err != nil {
+			if _, err := t.conn.Write(pkts[i].Serialize()); err != nil {
 				return 0, err
 			}
 		}
-	} else {
-		_, err := t.conn.Write(buf[:length])
-		if err != nil {
-			return 0, err
-		}
+		return length, nil
 	}
-	t.send += length
+	return 0, err
+}
+
+func (t *tcp) writePlain(buf []byte, length int) (int, error) {
+	if _, err := t.conn.Write(buf[:length]); err != nil {
+		return 0, err
+	}
 	return length, nil
 }

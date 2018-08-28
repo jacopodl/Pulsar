@@ -3,12 +3,11 @@ package connect
 import (
 	"packet"
 	"net"
-	"strconv"
 	"os"
 	"encoding/base32"
 	"strings"
-	"fmt"
 	dproto "connect/proto/dns"
+	"fmt"
 )
 
 const BASECHUNK = 340
@@ -28,6 +27,17 @@ func NewDnsConnector() Connector {
 	return &dns{&ConnectorStats{}, nil, nil, "", 0, nil, nil, nil}
 }
 
+func splitDomainAddr(address string) (string, string, error) {
+	domaddr := strings.Split(address, "@")
+	if len(domaddr) < 2 {
+		return "", "", fmt.Errorf("missing domain name")
+	}
+	if !strings.HasPrefix(domaddr[0], ".") {
+		domaddr[0] = "." + domaddr[0]
+	}
+	return domaddr[0], domaddr[1], nil
+}
+
 func (d *dns) Name() string {
 	return "dns"
 }
@@ -41,31 +51,21 @@ func (d *dns) Stats() *ConnectorStats {
 }
 
 func (d *dns) Connect(listen, plain bool, address string) (Connector, error) {
-	var strIp = ""
-	var strPort = ""
 	var laddr *net.UDPAddr = nil
 	var raddr *net.UDPAddr = nil
 	var err error = nil
 
-	domaddr := strings.Split(address, "@")
-	if len(domaddr) < 2 {
-		return nil, fmt.Errorf("missing domain name")
-	}
-	if !strings.HasPrefix(domaddr[0], ".") {
-		domaddr[0] = "." + domaddr[0]
-	}
-
-	strIp, strPort, err = net.SplitHostPort(domaddr[1])
+	domain, addr, err := splitDomainAddr(address)
 	if err != nil {
 		return nil, err
 	}
 
-	port, err := strconv.ParseUint(strPort, 10, 16)
+	ip, port, err := ParseAddress(addr)
 	if err != nil {
 		return nil, err
 	}
 
-	laddr = &net.UDPAddr{IP: net.ParseIP(strIp), Port: int(port), Zone: ""}
+	laddr = &net.UDPAddr{IP: ip, Port: port, Zone: ""}
 	if !listen {
 		raddr = laddr
 		laddr = &net.UDPAddr{IP: net.IPv4zero, Port: 0, Zone: ""}
@@ -77,17 +77,18 @@ func (d *dns) Connect(listen, plain bool, address string) (Connector, error) {
 	}
 
 	// Calculating chunk size
-	chunk := BASECHUNK - len(domaddr[0]) - dproto.DNSHDRSIZE
+	chunk := BASECHUNK - len(domain) - dproto.DNSHDRSIZE
 	chunk = (chunk / 8) * 5
 	chunk -= (dproto.QUERYSIZE + 1) * (((chunk / 5) * 8) / dproto.MAXLBLSIZE)
 	// EOL
 
 	pktFactory, _ := packet.NewPacketFactory(chunk, uint32(os.Getpid()))
 
-	return &dns{&ConnectorStats{},
+	return &dns{
+		&ConnectorStats{},
 		pktFactory,
 		packet.NewQueue(),
-		domaddr[0],
+		domain,
 		uint16(os.Getpid()),
 		conn,
 		raddr,

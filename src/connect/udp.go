@@ -3,7 +3,6 @@ package connect
 import (
 	"packet"
 	"net"
-	"strconv"
 	"os"
 )
 
@@ -36,23 +35,15 @@ func (u *udp) Stats() *ConnectorStats {
 }
 
 func (u *udp) Connect(listen, plain bool, address string) (Connector, error) {
-	var strIp = ""
-	var strPort = ""
 	var laddr *net.UDPAddr = nil
 	var raddr *net.UDPAddr = nil
-	var err error = nil
 
-	strIp, strPort, err = net.SplitHostPort(address)
+	ip, port, err := ParseAddress(address)
 	if err != nil {
 		return nil, err
 	}
 
-	port, err := strconv.ParseUint(strPort, 10, 16)
-	if err != nil {
-		return nil, err
-	}
-
-	laddr = &net.UDPAddr{IP: net.ParseIP(strIp), Port: int(port), Zone: ""}
+	laddr = &net.UDPAddr{IP: ip, Port: port, Zone: ""}
 	if !listen {
 		raddr = laddr
 		laddr = &net.UDPAddr{IP: net.IPv4zero, Port: 0, Zone: ""}
@@ -113,27 +104,44 @@ func (u *udp) Read() ([]byte, int, error) {
 }
 
 func (u *udp) Write(buf []byte, length int) (int, error) {
+	var err error = nil
+
 	if u.connHost == nil {
 		return 0, nil
 	}
 
-	if !u.plain {
-		pkts, err := u.Buffer2pkts(buf, length)
-		if err != nil {
-			return 0, err
-		}
+	if u.plain {
+		length, err = u.writePlain(buf, length)
+	} else {
+		length, err = u.write(buf, length)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	u.send += length
+	return length, nil
+}
+
+func (u *udp) write(buf []byte, length int) (int, error) {
+	var pkts []*packet.Packet
+	var err error = nil
+
+	if pkts, err = u.Buffer2pkts(buf, length); err == nil {
 		for i := range pkts {
-			_, err := u.conn.WriteToUDP(pkts[i].Serialize(), u.connHost)
-			if err != nil {
+			if _, err = u.conn.WriteToUDP(pkts[i].Serialize(), u.connHost); err != nil {
 				return 0, err
 			}
 		}
-	} else {
-		_, err := u.conn.WriteToUDP(buf[:length], u.connHost)
-		if err != nil {
-			return 0, err
-		}
+		return length, nil
 	}
-	u.send += length
+	return 0, err
+}
+
+func (u *udp) writePlain(buf []byte, length int) (int, error) {
+	if _, err := u.conn.WriteToUDP(buf[:length], u.connHost); err != nil {
+		return 0, err
+	}
 	return length, nil
 }
