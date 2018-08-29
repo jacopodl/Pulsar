@@ -1,13 +1,13 @@
 package connect
 
 import (
-	"packet"
+	dproto "connect/proto/dns"
+	"encoding/base32"
+	"fmt"
 	"net"
 	"os"
-	"encoding/base32"
+	"packet"
 	"strings"
-	dproto "connect/proto/dns"
-	"fmt"
 )
 
 const BASECHUNK = 340
@@ -110,7 +110,7 @@ func (d *dns) Read() ([]byte, int, error) {
 			return nil, 0, err
 		}
 
-		buf, length, err := d.extractData()
+		buf, length, err := extractData(d.rbuf[:length], d.domain)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -133,26 +133,6 @@ func (d *dns) Read() ([]byte, int, error) {
 			d.recv += len(data)
 			break
 		}
-	}
-	return data, len(data), nil
-}
-
-func (d *dns) extractData() ([]byte, int, error) {
-	b32data := ""
-
-	pkt := dproto.Deserialize(d.rbuf)
-	questions := pkt.GetQuestions()
-	for i := range questions {
-		if len(questions[i]) < 2 {
-			continue
-		}
-		if domain := strings.Join(questions[i][1:], "."); domain == d.domain[1:] {
-			b32data += questions[i][0]
-		}
-	}
-	data, err := base32.StdEncoding.DecodeString(b32data)
-	if err != nil {
-		return nil, 0, err
 	}
 	return data, len(data), nil
 }
@@ -189,4 +169,24 @@ func (d *dns) Write(buf []byte, length int) (int, error) {
 
 	d.send += length
 	return length, nil
+}
+
+func extractData(buf []byte, domain string) ([]byte, int, error) {
+	b32data := ""
+
+	pkt := dproto.Deserialize(buf)
+	questions := pkt.GetQuestions()
+	for i := range questions {
+		if len(questions[i]) < 2 {
+			continue
+		}
+		if dom := strings.Join(questions[i][1:], "."); dom == domain[1:] {
+			b32data += questions[i][0]
+		}
+	}
+	data, err := base32.StdEncoding.DecodeString(b32data)
+	if err != nil {
+		return nil, 0, err
+	}
+	return data, len(data), nil
 }
