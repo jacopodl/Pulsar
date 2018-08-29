@@ -1,9 +1,9 @@
 package connect
 
 import (
-	"packet"
 	"net"
 	"os"
+	"packet"
 )
 
 const UDPCHUNK = 384
@@ -86,7 +86,7 @@ func (u *udp) Read() ([]byte, int, error) {
 			continue
 		}
 		if u.plain {
-			u.recv = length
+			u.recv += length
 			return u.rbuf, length, nil
 		}
 		pkt, err := u.Deserialize(u.rbuf, length)

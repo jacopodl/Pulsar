@@ -2,8 +2,8 @@ package connect
 
 import (
 	"net"
-	"packet"
 	"os"
+	"packet"
 )
 
 const TCPCHUNK = 1320
@@ -77,7 +77,7 @@ func (t *tcp) Read() ([]byte, int, error) {
 			return nil, 0, err
 		}
 		if t.plain {
-			t.recv = length
+			t.recv += length
 			return t.rbuf, length, nil
 		}
 		pkt, err := t.Deserialize(t.rbuf, length)
