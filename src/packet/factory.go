@@ -41,7 +41,7 @@ func (f *Factory) Buffer2pkts(buf []byte, buflen int) ([]*Packet, error) {
 	var remaining = uint32(buflen)
 	pkts := make([]*Packet, 0)
 
-	for ; remaining > 0; {
+	for {
 		write := uint32(f.chunk)
 		if remaining < uint32(f.chunk) {
 			write = remaining
@@ -57,6 +57,10 @@ func (f *Factory) Buffer2pkts(buf []byte, buflen int) ([]*Packet, error) {
 		done += write
 		remaining -= write
 		pkts = append(pkts, NewPacket(f.bseq, f.bseq+done, uint32(buflen), data))
+
+		if remaining == 0 {
+			break
+		}
 	}
 	f.bseq += 1 // Updating bseq
 	return pkts, nil
