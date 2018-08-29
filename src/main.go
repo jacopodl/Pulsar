@@ -1,14 +1,14 @@
 package main
 
 import (
-	"flag"
 	"connect"
-	"handle"
+	"flag"
 	"fmt"
-	"sync"
+	"handle"
 	"os"
-	"time"
 	"strings"
+	"sync"
+	"time"
 )
 
 const (
@@ -82,7 +82,6 @@ func main() {
 	flag.IntVar(&options.delay, "delay", 0, "Delay in millisecond to wait between I/O loop")
 
 	// Handlers
-	handle.RegisterHandler(handle.NewStub())
 	handle.RegisterHandler(handle.NewBase64())
 	handle.RegisterHandler(handle.NewCipher())
 
