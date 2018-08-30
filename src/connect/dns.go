@@ -102,39 +102,42 @@ func (d *dns) Close() {
 
 func (d *dns) Read() ([]byte, int, error) {
 	var data []byte = nil
-	var ok = false
+	var pkt *packet.Packet = nil
+	var addr *net.UDPAddr = nil
+	var err error = nil
+	var length = 0
 
 	for {
-		length, addr, err := d.conn.ReadFromUDP(d.rbuf)
-		if length == 0 {
+		if length, addr, err = d.conn.ReadFromUDP(d.rbuf); err != nil {
 			return nil, 0, err
 		}
 
-		buf, length, err := extractData(d.rbuf[:length], d.domain)
-		if err != nil {
+		if data, length, err = extractData(d.rbuf[:length], d.domain); err != nil {
 			return nil, 0, err
 		}
 
-		if d.connHost == nil && length > 0 {
-			d.connHost = addr
-		}
-
-		if !d.connHost.IP.Equal(addr.IP) || d.connHost.Port != addr.Port {
+		if length == 0 || !d.checkPartner(addr) {
 			continue
 		}
 
-		pkt, err := d.Deserialize(buf, length)
-		if err != nil {
+		if pkt, err = d.Deserialize(data, length); err != nil {
 			return nil, 0, err
 		}
 		d.Add(pkt)
-		data, ok = d.Buffer()
-		if ok {
+		if data = d.Buffer(); data != nil {
 			d.recv += len(data)
 			break
 		}
 	}
 	return data, len(data), nil
+}
+
+func (d *dns) checkPartner(addr *net.UDPAddr) bool {
+	if d.connHost == nil {
+		d.connHost = addr
+		return true
+	}
+	return d.connHost.IP.Equal(addr.IP) && d.connHost.Port == addr.Port
 }
 
 func (d *dns) Write(buf []byte, length int) (int, error) {

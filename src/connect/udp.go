@@ -72,35 +72,40 @@ func (u *udp) Close() {
 
 func (u *udp) Read() ([]byte, int, error) {
 	var data []byte = nil
-	var ok = false
+	var pkt *packet.Packet = nil
+	var addr *net.UDPAddr = nil
+	var err error = nil
+	var length = 0
 
 	for {
-		length, addr, err := u.conn.ReadFromUDP(u.rbuf)
-		if length == 0 {
+		if length, addr, err = u.conn.ReadFromUDP(u.rbuf); err != nil {
 			return nil, 0, err
 		}
-		if u.connHost == nil {
-			u.connHost = addr
-		}
-		if !u.connHost.IP.Equal(addr.IP) || u.connHost.Port != addr.Port {
+		if !u.checkPartner(addr) {
 			continue
 		}
 		if u.plain {
 			u.recv += length
 			return u.rbuf, length, nil
 		}
-		pkt, err := u.Deserialize(u.rbuf, length)
-		if err != nil {
+		if pkt, err = u.Deserialize(u.rbuf, length); err != nil {
 			return nil, 0, err
 		}
 		u.Add(pkt)
-		data, ok = u.Buffer()
-		if ok {
+		if data = u.Buffer(); data != nil {
 			u.recv += len(data)
 			break
 		}
 	}
 	return data, len(data), nil
+}
+
+func (u *udp) checkPartner(addr *net.UDPAddr) bool {
+	if u.connHost == nil {
+		u.connHost = addr
+		return true
+	}
+	return u.connHost.IP.Equal(addr.IP) && u.connHost.Port == addr.Port
 }
 
 func (u *udp) Write(buf []byte, length int) (int, error) {

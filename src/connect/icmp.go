@@ -79,45 +79,45 @@ func (i *icmp) Close() {
 
 func (i *icmp) Read() ([]byte, int, error) {
 	var data []byte = nil
-	var ok = false
+	var pkt *packet.Packet = nil
+	var peer net.Addr = nil
+	var msg *gicmp.Message = nil
+	var err error = nil
+	var length = 0
 
 	for {
-		length, peer, err := i.conn.ReadFrom(i.rbuf)
-		if length == 0 {
+		if length, peer, err = i.conn.ReadFrom(i.rbuf); err != nil {
 			return nil, 0, err
 		}
-		if i.raddr == "" {
-			i.raddr = peer.String()
-		}
-		if i.raddr != peer.String() {
-			continue
-		}
-		rm, err := gicmp.ParseMessage(1, i.rbuf[:length])
-		if err != nil {
+		if msg, err = gicmp.ParseMessage(1, i.rbuf[:length]); err != nil {
 			return nil, 0, err
 		}
 
-		if rm.Type == ipv4.ICMPTypeEcho {
-			echo := rm.Body.(*gicmp.Echo)
-			if i.rid == -1 && echo.ID != os.Getpid()&0xFFFF {
-				i.rid = echo.ID
-			}
-			if i.rid != echo.ID {
+		if msg.Type == ipv4.ICMPTypeEcho {
+			echo := msg.Body.(*gicmp.Echo)
+			if !i.checkPartner(peer, echo.ID) {
 				continue
 			}
-			pkt, err := i.Deserialize(echo.Data, ICMPCHUNK)
-			if err != nil {
+			if pkt, err = i.Deserialize(echo.Data, ICMPCHUNK); err != nil {
 				return nil, 0, err
 			}
 			i.Add(pkt)
-			data, ok = i.Buffer()
-			if ok {
+			if data = i.Buffer(); data != nil {
 				i.recv += len(data)
 				break
 			}
 		}
 	}
 	return data, len(data), nil
+}
+
+func (i *icmp) checkPartner(peer net.Addr, rid int) bool {
+	if i.raddr == "" && (i.rid == -1 && rid != os.Getpid()&0xFFFF) {
+		i.raddr = peer.String()
+		i.rid = rid
+		return true
+	}
+	return i.raddr == peer.String() && i.rid == rid
 }
 
 func (i *icmp) Write(buf []byte, length int) (int, error) {
@@ -133,7 +133,7 @@ func (i *icmp) Write(buf []byte, length int) (int, error) {
 		wm := gicmp.Message{
 			Type: ipv4.ICMPTypeEcho, Code: 0,
 			Body: &gicmp.Echo{
-				ID:   os.Getpid() & 0xFFFF, Seq: i.gblseq,
+				ID: os.Getpid() & 0xFFFF, Seq: i.gblseq,
 				Data: pkts[j].Serialize()}}
 		wb, err := wm.Marshal(nil)
 		if err != nil {

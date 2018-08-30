@@ -23,13 +23,12 @@ func (q *Queue) Add(packet *Packet) {
 	}
 }
 
-func (q *Queue) Buffer() ([]byte, bool) {
+func (q *Queue) Buffer() []byte {
 	var buf []byte = nil
 	var bseq uint32 = 0
 	var lastlen uint32 = 0
 	var tlen uint32 = 0
 	var lastpkt = -1
-	var ok = false
 
 	for i := range q.queue {
 		pkt := q.queue[i]
@@ -62,10 +61,9 @@ func (q *Queue) Buffer() ([]byte, bool) {
 		buf = append(buf, q.queue[lastpkt].Data[:q.queue[lastpkt].Tlen-lastlen]...)
 		q.queue[lastpkt] = nil
 		q.queue = q.queue[lastpkt+1:] // remove packets from queue
-		ok = true
 	}
 
-	return buf, ok
+	return buf
 }
 
 func (q *Queue) Clear() {

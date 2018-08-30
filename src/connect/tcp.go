@@ -69,11 +69,10 @@ func (t *tcp) Close() {
 
 func (t *tcp) Read() ([]byte, int, error) {
 	var data []byte = nil
-	var ok = false
 
 	for {
 		length, err := t.conn.Read(t.rbuf)
-		if length == 0 {
+		if err != nil {
 			return nil, 0, err
 		}
 		if t.plain {
@@ -85,13 +84,11 @@ func (t *tcp) Read() ([]byte, int, error) {
 			return nil, 0, err
 		}
 		t.Add(pkt)
-		data, ok = t.Buffer()
-		if ok {
+		if data = t.Buffer(); data != nil {
 			t.recv += len(data)
 			break
 		}
 	}
-
 	return data, len(data), nil
 }
 
