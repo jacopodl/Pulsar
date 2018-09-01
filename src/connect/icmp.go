@@ -112,9 +112,11 @@ func (i *icmp) Read() ([]byte, int, error) {
 }
 
 func (i *icmp) checkPartner(peer net.Addr, rid int) bool {
-	if i.raddr == "" && (i.rid == -1 && rid != os.Getpid()&0xFFFF) {
-		i.raddr = peer.String()
+	if i.rid == -1 && rid != os.Getpid()&0xFFFF {
 		i.rid = rid
+		if i.raddr == "" {
+			i.raddr = peer.String()
+		}
 		return true
 	}
 	return i.raddr == peer.String() && i.rid == rid
