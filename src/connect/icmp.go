@@ -73,6 +73,7 @@ func (i *icmp) Connect(listen, plain bool, address string) (Connector, error) {
 }
 
 func (i *icmp) Close() {
+	i.Write(nil, 0)
 	i.conn.Close()
 	i.Queue.Clear()
 }
@@ -84,6 +85,7 @@ func (i *icmp) Read() ([]byte, int, error) {
 	var msg *gicmp.Message = nil
 	var err error = nil
 	var length = 0
+	var ok = false
 
 	for {
 		if length, peer, err = i.conn.ReadFrom(i.rbuf); err != nil {
@@ -102,7 +104,7 @@ func (i *icmp) Read() ([]byte, int, error) {
 				return nil, 0, err
 			}
 			i.Add(pkt)
-			if data = i.Buffer(); data != nil {
+			if data, ok = i.Buffer(); ok {
 				i.recv += len(data)
 				break
 			}

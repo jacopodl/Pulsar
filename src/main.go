@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"handle"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -26,6 +27,7 @@ type Options struct {
 	decode   bool
 	duplex   bool
 	verbose  bool
+	closed   bool
 	delay    int
 }
 
@@ -152,11 +154,13 @@ func dataLoop(in, out *connect.Connector, decode bool, options *Options, wait *s
 	defer wait.Done()
 	for {
 		buffer, length, err := (*in).Read()
-		if err != nil {
-			if err.Error() == "EOF" {
-				return
+		if length == 0 {
+			if !options.closed && err != nil && err != io.EOF {
+				onError(err)
 			}
-			onError(err)
+			options.closed = true
+			(*out).Close()
+			return
 		}
 		tbuf, length, err := handle.Process(buffer, length, decode)
 		if err != nil {

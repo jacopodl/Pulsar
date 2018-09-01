@@ -96,6 +96,7 @@ func (d *dns) Connect(listen, plain bool, address string) (Connector, error) {
 }
 
 func (d *dns) Close() {
+	d.Write(nil, 0)
 	d.conn.Close()
 	d.Queue.Clear()
 }
@@ -106,6 +107,7 @@ func (d *dns) Read() ([]byte, int, error) {
 	var addr *net.UDPAddr = nil
 	var err error = nil
 	var length = 0
+	var ok = false
 
 	for {
 		if length, addr, err = d.conn.ReadFromUDP(d.rbuf); err != nil {
@@ -124,7 +126,7 @@ func (d *dns) Read() ([]byte, int, error) {
 			return nil, 0, err
 		}
 		d.Add(pkt)
-		if data = d.Buffer(); data != nil {
+		if data, ok = d.Buffer(); ok {
 			d.recv += len(data)
 			break
 		}

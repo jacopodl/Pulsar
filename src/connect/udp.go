@@ -66,6 +66,7 @@ func (u *udp) Connect(listen, plain bool, address string) (Connector, error) {
 }
 
 func (u *udp) Close() {
+	u.Write(nil, 0)
 	u.conn.Close()
 	u.Queue.Clear()
 }
@@ -76,6 +77,7 @@ func (u *udp) Read() ([]byte, int, error) {
 	var addr *net.UDPAddr = nil
 	var err error = nil
 	var length = 0
+	var ok = false
 
 	for {
 		if length, addr, err = u.conn.ReadFromUDP(u.rbuf); err != nil {
@@ -92,7 +94,7 @@ func (u *udp) Read() ([]byte, int, error) {
 			return nil, 0, err
 		}
 		u.Add(pkt)
-		if data = u.Buffer(); data != nil {
+		if data, ok = u.Buffer(); ok {
 			u.recv += len(data)
 			break
 		}
