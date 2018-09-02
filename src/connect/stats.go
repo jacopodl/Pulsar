@@ -28,11 +28,11 @@ func (cs *ConnectorStats) String() string {
 func prettyStats(value int) string {
 	switch {
 	case value > GIGABYTE:
-		return fmt.Sprintf("%d GB", value/GIGABYTE)
+		return fmt.Sprintf("%f GB", float32(value)/GIGABYTE)
 	case value > MEGABYTE:
-		return fmt.Sprintf("%d MB", value/MEGABYTE)
+		return fmt.Sprintf("%f MB", float32(value)/MEGABYTE)
 	case value > KILOBYTE:
-		return fmt.Sprintf("%d KB", value/KILOBYTE)
+		return fmt.Sprintf("%f KB", float32(value)/KILOBYTE)
 	}
 	return fmt.Sprintf("%d Bytes", value)
 }

@@ -156,7 +156,7 @@ func (d *dns) Write(buf []byte, length int) (int, error) {
 		dpkt := dproto.NewDnsPacket(d.id)
 		data := base32.StdEncoding.EncodeToString(pkts[i].Serialize())
 		ldata := len(data)
-		wlen := 63
+		wlen := dproto.MAXLBLSIZE
 		wb := 0
 		for ; ldata != 0; ldata -= wlen {
 			if wlen >= ldata {
