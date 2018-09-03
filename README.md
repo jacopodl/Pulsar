@@ -3,6 +3,25 @@ Pulsar is a tool for data exfiltration and covert communication that enable you 
 a bizzare chat or a network tunnel through different protocols, for example you can receive data from tcp connection 
 and resend that to real destination through DNS packets :tada:
 
+# Setting up Pulsar :hammer:
+
+First, getting the code from repository:
+
+    $ git clone https://github.com/jacopodl/pulsar
+    
+:warning: **Make sure you have at least Go 1.8 in your system to build Pulsar** :warning:
+
+Compile it with followings command:
+
+    $ cd pulsar
+    $ export GOPATH=$(shell pwd)
+    $ go get golang.org/x/net/icmp
+    $ go build -o bin/pulsar src/main.go
+
+or run:
+    
+    $ make
+
 ## Example
 In the following example Pulsar will be used to create a secure two-way tunnel on DNS protocol, data will be read from TCP connection (simple nc client) and resend encrypted through the tunnel.
 
