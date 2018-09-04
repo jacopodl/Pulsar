@@ -22,7 +22,33 @@ or run:
     
     $ make
 
-## Example
+# Connectors :satellite:
+A connector is a simple channel to the external world, with the connector you can read and write data from different sources.
+* Console:
+    - Default in/out connector, read data from stdin and write to stdout
+* TCP
+    - Read and write data through tcp connections
+    
+            tcp:127.0.0.1:9000
+* UDP
+    - Read and write data through udp packet
+    
+            udp:127.0.0.1:9000
+* ICMP
+    - Read and write data through icmp packet
+    
+            icmp:127.0.0.1 (the connection port is obviously useless)
+* DNS
+    - Read and write data through dns packet
+    
+            dns:fakedomain.net@127.0.0.1:1994
+
+You can use option --in in order to select input connector and option --out to select output connector:
+        
+        --in tcp:127.0.0.1:9000
+        --out dns:fkdns.lol:2.3.4.5:8989
+
+# Example
 In the following example Pulsar will be used to create a secure two-way tunnel on DNS protocol, data will be read from TCP connection (simple nc client) and resend encrypted through the tunnel.
 
     [nc 127.0.0.1 9000] <--TCP--> [pulsar] <--DNS--> [pulsar] <--TCP--> [nc -l 127.0.0.1 -p 9900]
