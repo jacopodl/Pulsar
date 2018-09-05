@@ -1,8 +1,9 @@
 package dns
 
 import (
-	"encoding/binary"
 	"bytes"
+	"encoding/binary"
+	"fmt"
 )
 
 const (
@@ -39,9 +40,12 @@ func NewDnsPacket(id uint16) *Dns {
 	return &packet
 }
 
-func Deserialize(buf []byte) *Dns {
-	pkt := Dns{}
+func Deserialize(buf []byte) (*Dns, error) {
+	if len(buf) < DNSHDRSIZE {
+		return nil, fmt.Errorf("malformed packet")
+	}
 
+	pkt := Dns{}
 	pkt.Id = binary.BigEndian.Uint16(buf[:2])
 	pkt.Info = binary.BigEndian.Uint16(buf[2:4])
 	pkt.TotalQuestions = binary.BigEndian.Uint16(buf[4:6])
@@ -50,7 +54,7 @@ func Deserialize(buf []byte) *Dns {
 	pkt.TotalAdditional = binary.BigEndian.Uint16(buf[10:])
 
 	pkt.Data = append([]byte{}, buf[12:]...)
-	return &pkt
+	return &pkt, nil
 }
 
 func dname2qname(dname string) []byte {
@@ -79,7 +83,7 @@ func getQuestion(buf []byte, start uint16) ([]string, uint16) {
 	var question []string
 	var last uint16 = 0
 	for lr := uint16(buf[start]); lr != 0; lr = uint16(buf[start]) {
-		start ++
+		start++
 		if lr&0xC0 == 0xC0 {
 			if last == 0 {
 				last = start + 5
@@ -135,7 +139,7 @@ func (d *Dns) compress(question []byte) []byte {
 		if lq != lr {
 			ridx += lr + 1
 			if lr == 0 {
-				qtot ++
+				qtot++
 				if qtot > d.TotalQuestions {
 					qidx += lq + 1
 					if question[qidx] == 0 {

@@ -76,13 +76,7 @@ func (d *dns) Connect(listen, plain bool, address string) (Connector, error) {
 		return nil, err
 	}
 
-	// Calculating chunk size
-	chunk := BASECHUNK - len(domain) - dproto.DNSHDRSIZE
-	chunk = (chunk / 8) * 5
-	chunk -= (dproto.QUERYSIZE + 1) * (((chunk / 5) * 8) / dproto.MAXLBLSIZE)
-	// EOL
-
-	pktFactory, _ := packet.NewPacketFactory(chunk, uint32(os.Getpid()))
+	pktFactory, _ := packet.NewPacketFactory(computeChunkSize(domain), uint32(os.Getpid()))
 
 	return &dns{
 		&ConnectorStats{},
@@ -176,22 +170,32 @@ func (d *dns) Write(buf []byte, length int) (int, error) {
 	return length, nil
 }
 
-func extractData(buf []byte, domain string) ([]byte, int, error) {
-	b32data := ""
+func computeChunkSize(domain string) (chunk int) {
+	chunk = BASECHUNK - len(domain) - dproto.DNSHDRSIZE
+	chunk = (chunk / 8) * 5
+	chunk -= (dproto.QUERYSIZE + 1) * (((chunk / 5) * 8) / dproto.MAXLBLSIZE)
+	return
+}
 
-	pkt := dproto.Deserialize(buf)
-	questions := pkt.GetQuestions()
-	for i := range questions {
-		if len(questions[i]) < 2 {
-			continue
+func extractData(buf []byte, domain string) ([]byte, int, error) {
+	var data []byte
+	var pkt *dproto.Dns
+	var err error
+	var b32data = ""
+
+	if pkt, err = dproto.Deserialize(buf); err == nil {
+		questions := pkt.GetQuestions()
+		for i := range questions {
+			if len(questions[i]) < 2 {
+				continue
+			}
+			if dom := strings.Join(questions[i][1:], "."); dom == domain[1:] {
+				b32data += questions[i][0]
+			}
 		}
-		if dom := strings.Join(questions[i][1:], "."); dom == domain[1:] {
-			b32data += questions[i][0]
+		if data, err = base32.StdEncoding.DecodeString(b32data); err == nil {
+			return data, len(data), nil
 		}
 	}
-	data, err := base32.StdEncoding.DecodeString(b32data)
-	if err != nil {
-		return nil, 0, err
-	}
-	return data, len(data), nil
+	return nil, 0, err
 }
