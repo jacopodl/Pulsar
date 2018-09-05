@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	DNSHDRSIZE        = 12
 	TYPE_A     uint16 = 1
 	TYPE_NS    uint16 = 2
 	TYPE_CNAME uint16 = 5
@@ -16,13 +17,7 @@ const (
 	TYPE_TXT   uint16 = 16
 	TYPE_AAAA  uint16 = 28
 
-	CLASS_IN  uint16 = 1
-	CLASS_CH  uint16 = 3
-	CLASS_HS  uint16 = 4
-	CLASS_ANY uint16 = 255
-
-	DNSHDRSIZE = 12
-	MAXLBLSIZE = 63
+	CLASS_IN uint16 = 1
 )
 
 type Dns struct {
@@ -55,27 +50,6 @@ func Deserialize(buf []byte) (*Dns, error) {
 
 	pkt.Data = append([]byte{}, buf[12:]...)
 	return &pkt, nil
-}
-
-func getQuestion(buf []byte, start uint16) ([]string, uint16) {
-	var question []string
-	var last uint16 = 0
-	for lr := uint16(buf[start]); lr != 0; lr = uint16(buf[start]) {
-		start++
-		if lr&0xC0 == 0xC0 {
-			if last == 0 {
-				last = start + 5
-			}
-			start = uint16(buf[start]) - 12
-			continue
-		}
-		question = append(question, string(buf[start:start+lr]))
-		start += lr
-	}
-	if last == 0 {
-		last = start + 5
-	}
-	return question, last
 }
 
 func (d *Dns) AddQuestion(query *Query) {
@@ -118,14 +92,14 @@ func (d *Dns) compress(question []byte) []byte {
 	return question
 }
 
-func (d *Dns) GetQuestions() [][]string {
-	var questions [][]string
-	var question []string
+func (d *Dns) GetQuestions() []*Query {
+	var questions []*Query
+	var question []byte
 	var qidx uint16 = 0
 
 	for total := uint16(0); total < d.TotalQuestions; total++ {
-		question, qidx = getQuestion(d.Data, qidx)
-		questions = append(questions, question)
+		question, qidx = uncompress(d.Data, qidx)
+		questions = append(questions, DeserializeQuery(question))
 	}
 
 	return questions
@@ -143,6 +117,33 @@ func (d *Dns) Serialize() []byte {
 
 	data = append(data, d.Data...)
 	return data
+}
+
+func uncompress(buf []byte, start uint16) ([]byte, uint16) {
+	var question []byte
+	var last uint16 = 0
+
+	for lq := uint16(buf[start]); lq != 0x00; lq = uint16(buf[start]) {
+		if lq == 0xC0 {
+			if last == 0 {
+				last = start + 2
+			}
+			start = uint16(buf[start+1]) - 12
+			continue
+		}
+		question = append(question, buf[start:start+lq+1]...)
+		start += lq + 1
+	}
+
+	if last == 0 {
+		question = append(question, buf[start:start+QUERYSIZE+1]...)
+		return question, start + QUERYSIZE + 1
+	}
+
+	question = append(question, 0x00)
+	question = append(question, buf[last:last+QUERYSIZE]...)
+	return question, last + QUERYSIZE
+
 }
 
 func getQuery(buf []byte) (query uint16) {

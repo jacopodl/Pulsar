@@ -108,7 +108,7 @@ func (d *dns) Read() ([]byte, int, error) {
 			return nil, 0, err
 		}
 
-		if data, length, err = extractData(d.rbuf[:length], d.domain); err != nil {
+		if data, length, err = extractData(d.rbuf[:length], d.domain[1:]); err != nil {
 			return nil, 0, err
 		}
 
@@ -177,7 +177,7 @@ func computeChunkSize(domain string) (chunk int) {
 	return
 }
 
-func extractData(buf []byte, domain string) ([]byte, int, error) {
+func extractData(buf []byte, base string) ([]byte, int, error) {
 	var data []byte
 	var pkt *dproto.Dns
 	var err error
@@ -186,11 +186,11 @@ func extractData(buf []byte, domain string) ([]byte, int, error) {
 	if pkt, err = dproto.Deserialize(buf); err == nil {
 		questions := pkt.GetQuestions()
 		for i := range questions {
-			if len(questions[i]) < 2 {
+			if questions[i].CountLabel() < 2 {
 				continue
 			}
-			if dom := strings.Join(questions[i][1:], "."); dom == domain[1:] {
-				b32data += questions[i][0]
+			if payload, domain := questions[i].SplitLast(); domain == base {
+				b32data += payload
 			}
 		}
 		if data, err = base32.StdEncoding.DecodeString(b32data); err == nil {

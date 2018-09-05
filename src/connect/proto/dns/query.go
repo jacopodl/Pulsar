@@ -2,39 +2,67 @@ package dns
 
 import (
 	"encoding/binary"
+	"strings"
 )
 
-const QUERYSIZE = 4
+const (
+	QUERYSIZE  = 4
+	MAXLBLSIZE = 63
+	LABELSEP   = '.'
+)
 
 type Query struct {
-	data  []byte
-	ttype uint16
-	class uint16
+	Domain string
+	Type   uint16
+	Class  uint16
 }
 
-func NewQuery(name string, ttype uint16, class uint16) *Query {
-	return &Query{dname2qname(name), ttype, class}
+func NewQuery(domain string, qtype uint16, class uint16) *Query {
+	return &Query{domain, qtype, class}
+}
+
+func DeserializeQuery(buf []byte) *Query {
+	tmp := Query{}
+	sep := len(buf) - QUERYSIZE
+
+	tmp.Domain = qname2dname(buf[:sep])
+	tmp.Type = binary.BigEndian.Uint16(buf[sep : sep+2])
+	tmp.Class = binary.BigEndian.Uint16(buf[sep+2:])
+
+	return &tmp
 }
 
 func (q *Query) Serialize() []byte {
-	dlen := len(q.data)
+	qname := dname2qname(q.Domain)
+	buf := make([]byte, len(qname)+QUERYSIZE)
 
-	buf := make([]byte, dlen+QUERYSIZE)
-	copy(buf, q.data)
-	binary.BigEndian.PutUint16(buf[dlen:dlen+2], q.ttype)
-	binary.BigEndian.PutUint16(buf[dlen+2:], q.class)
+	lq := copy(buf, qname)
+	binary.BigEndian.PutUint16(buf[lq:lq+2], q.Type)
+	binary.BigEndian.PutUint16(buf[lq+2:], q.Class)
 
 	return buf
 }
 
-func (q *Query) Deserialize(buf []byte) *Query {
-	tmp := Query{}
+func (q *Query) CountLabel() int {
+	count := 0
+	for i := range q.Domain {
+		if q.Domain[i] == LABELSEP {
+			count++
+		}
+	}
+	return count
+}
 
-	tmp.data = append(tmp.data, buf[:len(buf)-QUERYSIZE]...)
-	tmp.ttype = binary.BigEndian.Uint16(buf[:2])
-	tmp.class = binary.BigEndian.Uint16(buf[2:])
+func (q *Query) Labels() []string {
+	return strings.Split(q.Domain, string(LABELSEP))
+}
 
-	return &tmp
+func (q *Query) SplitLast() (string, string) {
+	split := strings.SplitN(q.Domain, string(LABELSEP), 2)
+	if len(split) < 2 {
+		return "", split[0]
+	}
+	return split[0], split[1]
 }
 
 func dname2qname(dname string) []byte {
@@ -44,7 +72,7 @@ func dname2qname(dname string) []byte {
 	var qname = make([]byte, len(dname)+2)
 
 	for i = range dname {
-		if dname[i] == '.' {
+		if dname[i] == LABELSEP {
 			qname[ins] = count
 			ins = i + 1
 			count = 0
@@ -57,4 +85,18 @@ func dname2qname(dname string) []byte {
 	qname[ins] = count
 	qname[i+2] = 0x00
 	return qname
+}
+
+func qname2dname(qname []byte) string {
+	domain := ""
+	idx := 0
+
+	for lq := int(qname[idx]); lq != 0x00; lq = int(qname[idx]) {
+		domain += string(qname[idx+1 : idx+lq+1])
+		if idx += lq + 1; qname[idx] != 0x00 {
+			domain += string(LABELSEP)
+		}
+	}
+
+	return domain
 }
