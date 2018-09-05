@@ -57,28 +57,6 @@ func Deserialize(buf []byte) (*Dns, error) {
 	return &pkt, nil
 }
 
-func dname2qname(dname string) []byte {
-	var ins = 0
-	var count byte = 0
-	var i = 0
-	var qname = make([]byte, len(dname)+2)
-
-	for i = range dname {
-		if dname[i] == '.' {
-			qname[ins] = count
-			ins = i + 1
-			count = 0
-			continue
-		}
-		qname[i+1] = dname[i]
-		count++
-	}
-
-	qname[ins] = count
-	qname[i+2] = 0x00
-	return qname
-}
-
 func getQuestion(buf []byte, start uint16) ([]string, uint16) {
 	var question []string
 	var last uint16 = 0
@@ -100,15 +78,13 @@ func getQuestion(buf []byte, start uint16) ([]string, uint16) {
 	return question, last
 }
 
-func (d *Dns) AddQuestion(dname string, qtype uint16, qclass uint16) {
-	query := Query{qtype, qclass}
-	qname := dname2qname(dname)
+func (d *Dns) AddQuestion(query *Query) {
+	qname := query.Serialize()
 
 	// Try to compress question
 	qname = d.compress(qname)
 
 	d.Data = append(d.Data, qname...)
-	d.Data = append(d.Data, query.Serialize()...)
 	d.TotalQuestions++
 }
 
@@ -116,59 +92,29 @@ func (d *Dns) compress(question []byte) []byte {
 	var qidx uint16 = 0
 	var ridx uint16 = 0
 	var qtot uint16 = 1
-	var sridx uint16 = 0
-	var sqidx uint16 = 0
 
 	if d.TotalQuestions == 0 {
 		return question
 	}
 
 	for {
-		lq := uint16(question[qidx])
-		lr := uint16(d.Data[ridx])
-
-		if lr == 0 && lq == 0 {
+		if ok, l1, _ := compareQuestions(question, qidx, d.Data, ridx); ok {
+			binary.BigEndian.PutUint16(question[qidx:qidx+2], ridx+DNSHDRSIZE|0xC000)
+			question = append(question[:qidx+2], question[l1+1:]...)
 			break
 		}
-
-		if lr&0xC0 == 0xC0 {
-			ridx = uint16(d.Data[ridx+1]) - 12
-			continue
-		}
-
-		if lq != lr {
-			ridx += lr + 1
-			if lr == 0 {
-				qtot++
-				if qtot > d.TotalQuestions {
-					qidx += lq + 1
-					if question[qidx] == 0 {
-						return question
-					}
-					ridx = 0
-					qtot = 1
-					continue
+		qidx += uint16(question[qidx]) + 1
+		if question[qidx] == 0 {
+			ridx += uint16(d.Data[ridx]) + 1
+			if ridx == 0 {
+				if qtot++; qtot > d.TotalQuestions {
+					break
 				}
-				ridx += 4 // Len of Query struct
+				ridx += getQuery(d.Data[ridx:]) + QUERYSIZE
 			}
-			continue
+			qidx = 0
 		}
-		if !bytes.Equal(d.Data[ridx:ridx+lr], question[qidx:qidx+lq]) {
-			ridx += lr + 1
-			sridx = 0
-			sqidx = 0
-			continue
-		}
-		if sridx == 0 {
-			sridx = ridx
-			sqidx = qidx
-		}
-		ridx += lr + 1
-		qidx += lq + 1
-
 	}
-	binary.BigEndian.PutUint16(question[sqidx:sqidx+2], sridx+12|0xC000)
-	question = question[:sqidx+2]
 	return question
 }
 
@@ -197,4 +143,37 @@ func (d *Dns) Serialize() []byte {
 
 	data = append(data, d.Data...)
 	return data
+}
+
+func getQuery(buf []byte) (query uint16) {
+	var i byte = 0
+	for ; buf[i] != 0; i += buf[i] + 1 {
+		if buf[i] == 0xC0 {
+			return uint16(i + 1)
+		}
+	}
+	return uint16(i + 1)
+}
+
+func compareQuestions(q1 []byte, idx1 uint16, q2 []byte, idx2 uint16) (bool, uint16, uint16) {
+	for q1[idx1] != 0 && q2[idx2] != 0 {
+		l1 := uint16(q1[idx1])
+		l2 := uint16(q2[idx2])
+		idx1++
+		idx2++
+		if l1 == 0xC0 {
+			idx1 += uint16(q1[idx1+1]) - DNSHDRSIZE
+			continue
+		}
+		if l2 == 0xC0 {
+			idx2 += uint16(q1[idx2+1]) - DNSHDRSIZE
+			continue
+		}
+		if l1 != l2 || !bytes.Equal(q1[idx1:idx1+l1], q2[idx2:idx2+l2]) {
+			return false, 0, 0
+		}
+		idx1 += l1
+		idx2 += l2
+	}
+	return true, idx1, idx2
 }

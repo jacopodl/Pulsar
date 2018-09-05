@@ -156,7 +156,7 @@ func (d *dns) Write(buf []byte, length int) (int, error) {
 			if wlen >= ldata {
 				wlen = ldata
 			}
-			dpkt.AddQuestion(data[wb:wb+wlen]+d.domain, dproto.TYPE_A, dproto.CLASS_IN)
+			dpkt.AddQuestion(dproto.NewQuery(data[wb:wb+wlen]+d.domain, dproto.TYPE_A, dproto.CLASS_IN))
 			wb += wlen
 		}
 		_, err := d.conn.WriteToUDP(dpkt.Serialize(), d.connHost)
