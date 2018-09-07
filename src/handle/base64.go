@@ -5,7 +5,9 @@ import (
 	"stringsop"
 )
 
-type base64 struct{}
+type base64 struct {
+	buffer []byte
+}
 
 func NewBase64() Handler {
 	return &base64{}
@@ -28,13 +30,44 @@ func (b *base64) Options() []stringsop.Option {
 }
 
 func (b *base64) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
+	var ready []byte = nil
+	var prev = 0
+
 	if !decode {
 		encoded := []byte(b64.StdEncoding.EncodeToString(buf[:length]))
 		return encoded, len(encoded), nil
 	}
-	decoded, err := b64.StdEncoding.DecodeString(string(buf[:length]))
-	if err != nil {
-		return nil, 0, err
+
+	if b.buffer != nil {
+		b.buffer = append(b.buffer, buf[:length]...)
+		buf = b.buffer
+		length = len(buf)
+		b.buffer = nil
 	}
-	return decoded, len(decoded), nil
+
+	for prev != length {
+		chunk, ok := SplitInputBuffer(buf[prev:], 4, byte(b64.StdPadding))
+		if !ok {
+			b.buffer = append(b.buffer, buf[prev:prev+chunk]...)
+			break
+		}
+		decoded, err := b64.StdEncoding.DecodeString(string(buf[prev : prev+chunk]))
+		if err != nil {
+			b.buffer = nil
+			return nil, 0, err
+		}
+		ready = append(ready, decoded...)
+		prev += chunk
+	}
+	return ready, len(ready), nil
+}
+
+func SplitInputBuffer(buf []byte, baseChunk int, paddingRune byte) (int, bool) {
+	for i := baseChunk; i < len(buf); i += baseChunk {
+		if buf[i-1] == paddingRune {
+			return i, true
+			break
+		}
+	}
+	return len(buf), len(buf)%baseChunk == 0
 }
