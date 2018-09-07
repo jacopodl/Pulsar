@@ -2,14 +2,17 @@ package handle
 
 import (
 	"fmt"
+	"strings"
 )
+
+const HOPTIONSEP = ":"
 
 var (
 	Handlers            = map[string]Handler{}
-	Hchain   []*Handler = nil
+	hchain   []*Handler = nil
 )
 
-func RegisterHandler(handler Handler) error {
+func Register(handler Handler) error {
 	if _, ok := Handlers[handler.Name()]; ok {
 		return fmt.Errorf("handle %s already exists", handler.Name())
 	}
@@ -17,13 +20,16 @@ func RegisterHandler(handler Handler) error {
 	return nil
 }
 
-func MakeChain(hnames []string, options []string) error {
-	for _, hname := range hnames {
+func MakeChain(hnames []string) error {
+	var err error = nil
+
+	for i := range hnames {
+		hname, hopts := SplitHandlerOptions(hnames[i])
 		if handler, ok := Handlers[hname]; ok {
-			if err := handler.Init(options); err != nil {
+			if handler, err = handler.Init(hopts); err != nil {
 				return err
 			}
-			Hchain = append(Hchain, &handler)
+			hchain = append(hchain, &handler)
 			continue
 		}
 		return fmt.Errorf("handle %s not exists", hname)
@@ -33,10 +39,21 @@ func MakeChain(hnames []string, options []string) error {
 
 func Process(buf []byte, length int, decode bool) ([]byte, int, error) {
 	var err error = nil
-	for _, handler := range Hchain {
-		if buf, length, err = (*handler).Process(buf, length, decode); err != nil {
-			return nil, 0, err
+	for _, handler := range hchain {
+		if buf, length, err = (*handler).Process(buf, length, decode); err != nil || length == 0 {
+			buf = nil
+			length = 0
+			break
 		}
 	}
 	return buf, length, err
+}
+
+func SplitHandlerOptions(hopts string) (hname, hoptions string) {
+	split := strings.SplitN(hopts, HOPTIONSEP, 2)
+	hname = split[0]
+	if len(split) > 1 {
+		hoptions = split[1]
+	}
+	return
 }

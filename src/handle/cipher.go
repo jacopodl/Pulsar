@@ -1,26 +1,23 @@
 package handle
 
 import (
-	"stringsop"
-	"io"
-	"crypto/cipher"
 	"crypto/aes"
+	"crypto/cipher"
 	"crypto/des"
+	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
+const DEFAULTCIPHER = "aes"
+
 type cipherSt struct {
-	options []stringsop.Option
-	cipher  string
-	block   cipher.Block
+	block cipher.Block
 }
 
 func NewCipher() Handler {
-	return &cipherSt{[]stringsop.Option{
-		{"cipher", []string{"aes", "des", "tdes"}, "aes", "Set cipher type"},
-		{"cipher-key", nil, "", "Set cipher key"}},
-		"", nil}
+	return &cipherSt{}
 }
 
 func (c *cipherSt) Name() string {
@@ -28,41 +25,30 @@ func (c *cipherSt) Name() string {
 }
 
 func (c *cipherSt) Description() string {
-	return "The cipher! (AES,DES,TDES)"
+	return "CTR cipher - cipher:key|[aes|des|tdes#key]"
 }
 
-func (c *cipherSt) Init(options []string) error {
-	var cipher_key = ""
+func (c *cipherSt) Init(options string) (Handler, error) {
+	var hcipher = cipherSt{}
 	var err error = nil
-	parser := stringsop.NewStringsOp(options, c.options)
-	for {
-		key, value, err := parser.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		switch key {
-		case "cipher":
-			c.cipher = value
-		case "cipher-key":
-			cipher_key = value
-		}
-	}
-	switch c.cipher {
-	case "aes":
-		c.block, err = aes.NewCipher([]byte(cipher_key))
-	case "des":
-		c.block, err = des.NewCipher([]byte(cipher_key))
-	case "tdes":
-		c.block, err = des.NewTripleDESCipher([]byte(cipher_key))
-	}
-	return err
-}
 
-func (c *cipherSt) Options() []stringsop.Option {
-	return c.options
+	algo, key := splitCipherOptions(options)
+	switch algo {
+	case "aes":
+		hcipher.block, err = aes.NewCipher([]byte(key))
+	case "des":
+		hcipher.block, err = des.NewCipher([]byte(key))
+	case "tdes":
+		hcipher.block, err = des.NewTripleDESCipher([]byte(key))
+	default:
+		return nil, fmt.Errorf("invalid cipher: %s", algo)
+	}
+
+	if err == nil {
+		return &hcipher, nil
+	}
+
+	return nil, err
 }
 
 func (c *cipherSt) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
@@ -71,7 +57,7 @@ func (c *cipherSt) Process(buf []byte, length int, decode bool) ([]byte, int, er
 }
 
 func (c *cipherSt) processCTR(data []byte, decrypt bool) ([]byte, error) {
-	if ! decrypt {
+	if !decrypt {
 		ciphertext := make([]byte, c.block.BlockSize()+len(data))
 		iv := ciphertext[:c.block.BlockSize()]
 		rand.Seed(time.Now().UnixNano())
@@ -87,4 +73,16 @@ func (c *cipherSt) processCTR(data []byte, decrypt bool) ([]byte, error) {
 	stream := cipher.NewCTR(c.block, iv)
 	stream.XORKeyStream(plaintext, data[c.block.BlockSize():])
 	return plaintext, nil
+}
+
+func splitCipherOptions(options string) (algo, key string) {
+	split := strings.SplitN(options, "#", 2)
+	if len(split) > 1 {
+		algo = split[0]
+		key = split[1]
+		return
+	}
+	algo = DEFAULTCIPHER
+	key = split[0]
+	return
 }

@@ -3,7 +3,6 @@ package base
 import (
 	b64 "encoding/base64"
 	"handle"
-	"stringsop"
 )
 
 type base64 struct {
@@ -22,12 +21,8 @@ func (b *base64) Description() string {
 	return "Base64 encoder/decoder"
 }
 
-func (b *base64) Init(options []string) error {
-	return nil
-}
-
-func (b *base64) Options() []stringsop.Option {
-	return nil
+func (b *base64) Init(options string) (handle.Handler, error) {
+	return NewBase64(), nil
 }
 
 func (b *base64) Process(buf []byte, length int, decode bool) ([]byte, int, error) {

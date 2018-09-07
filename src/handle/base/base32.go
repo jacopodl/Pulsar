@@ -3,7 +3,6 @@ package base
 import (
 	b32 "encoding/base32"
 	"handle"
-	"stringsop"
 )
 
 type base32 struct {
@@ -22,12 +21,8 @@ func (b *base32) Description() string {
 	return "Base32 encoder/decoder"
 }
 
-func (b *base32) Init(options []string) error {
-	return nil
-}
-
-func (b *base32) Options() []stringsop.Option {
-	return nil
+func (b *base32) Init(options string) (handle.Handler, error) {
+	return NewBase32(), nil
 }
 
 func (b *base32) Process(buf []byte, length int, decode bool) ([]byte, int, error) {

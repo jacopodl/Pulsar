@@ -53,13 +53,6 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "\nBullt-In Handlers:\n")
 	for key, handler := range handle.Handlers {
 		fmt.Fprintf(os.Stderr, "%s\n\t%s\n", key, handler.Description())
-		if opts := handler.Options(); opts != nil {
-			fmt.Fprintf(os.Stderr, "* OPTIONS:\n")
-			for _, opt := range opts {
-				fmt.Fprintf(os.Stderr, "  %s\n\t%s\n", opt.String(), opt.Description)
-			}
-			fmt.Println()
-		}
 	}
 
 	fmt.Fprintf(os.Stderr, "\nBuit-In Connectors:\n")
@@ -85,9 +78,9 @@ func main() {
 	flag.IntVar(&options.delay, "delay", 0, "Delay in millisecond to wait between I/O loop")
 
 	// Handlers
-	handle.RegisterHandler(base.NewBase32())
-	handle.RegisterHandler(base.NewBase64())
-	handle.RegisterHandler(handle.NewCipher())
+	handle.Register(base.NewBase32())
+	handle.Register(base.NewBase64())
+	handle.Register(handle.NewCipher())
 
 	// Connectors
 	connect.RegisterConnector(connect.NewConsoleConnector())
@@ -114,8 +107,8 @@ func main() {
 	}
 
 	if options.handlers != "" {
-		tmp := strings.Split(options.handlers, ",")
-		if err := handle.MakeChain(tmp, flag.Args()); err != nil {
+		handler := strings.Split(options.handlers, ",")
+		if err := handle.MakeChain(handler); err != nil {
 			onError(err)
 		}
 	}
