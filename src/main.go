@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"handle"
+	"handle/base"
 	"io"
 	"os"
 	"strings"
@@ -84,7 +85,8 @@ func main() {
 	flag.IntVar(&options.delay, "delay", 0, "Delay in millisecond to wait between I/O loop")
 
 	// Handlers
-	handle.RegisterHandler(handle.NewBase64())
+	handle.RegisterHandler(base.NewBase32())
+	handle.RegisterHandler(base.NewBase64())
 	handle.RegisterHandler(handle.NewCipher())
 
 	// Connectors
