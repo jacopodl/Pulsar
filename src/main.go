@@ -16,6 +16,13 @@ import (
 const (
 	APP     = "Pulsar"
 	VERSION = "1.0.0"
+	LOGO    = `
+.______    __    __   __          _______.     ___      .______
+|   _  \  |  |  |  | |  |        /       |    /   \     |   _  \
+|  |_)  | |  |  |  | |  |       |   (----'   /  ^  \    |  |_)  |
+|   ___/  |  |  |  | |  |        \   \      /  /_\  \   |      /
+|  |      |  '--'  | |  '----.----)   |    /  _____  \  |  |\  \----.
+| _|       \______/  |_______|_______/    /__/     \__\ | _| \._____|`
 )
 
 type Options struct {
@@ -38,15 +45,16 @@ func onError(err error) {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "%s, Version: %s\n", APP, VERSION)
+	fmt.Fprintf(os.Stderr, LOGO)
+	fmt.Fprintf(os.Stderr, " V: %s\n\n", VERSION)
 	flag.PrintDefaults()
 
-	fmt.Fprintf(os.Stderr, "\nBullt-In Handlers:\n")
+	fmt.Fprintf(os.Stderr, "\nBuilt-In Handlers:\n\n")
 	for key, handler := range handle.Handlers {
 		fmt.Fprintf(os.Stderr, "%s\n\t%s\n", key, handler.Description())
 	}
 
-	fmt.Fprintf(os.Stderr, "\nBuit-In Connectors:\n")
+	fmt.Fprintf(os.Stderr, "\nBuilt-In Connectors:\n\n")
 	for key, connector := range connect.Connectors {
 		fmt.Fprintf(os.Stderr, "%s\n\t%s\n", key, connector.Description())
 	}
