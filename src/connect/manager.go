@@ -1,10 +1,15 @@
 package connect
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+const COPTIONSEP = ":"
 
 var Connectors = map[string]Connector{}
 
-func RegisterConnector(connector Connector) error {
+func Register(connector Connector) error {
 	if _, ok := Connectors[connector.Name()]; ok {
 		return fmt.Errorf("connector %s already exists", connector.Name())
 	}
@@ -12,9 +17,19 @@ func RegisterConnector(connector Connector) error {
 	return nil
 }
 
-func MakeConnect(cname string, listen, plain bool, address string) (Connector, error) {
-	if cnt, err := Connectors[cname]; err {
+func MakeConnect(cnameopt string, listen, plain bool) (Connector, error) {
+	connector, address := parseConnectorOptions(cnameopt)
+	if cnt, err := Connectors[connector]; err {
 		return cnt.Connect(listen, plain, address)
 	}
-	return nil, fmt.Errorf("unknown connector %s, aborted", cname)
+	return nil, fmt.Errorf("unknown connector %s, aborted", connector)
+}
+
+func parseConnectorOptions(value string) (connector string, address string) {
+	tmp := strings.SplitN(value, COPTIONSEP, 2)
+	connector = tmp[0]
+	if len(tmp) > 1 {
+		address = tmp[1]
+	}
+	return
 }

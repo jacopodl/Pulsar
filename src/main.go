@@ -37,15 +37,6 @@ func onError(err error) {
 	os.Exit(-1)
 }
 
-func parseInOutString(value string) (connector string, address string) {
-	tmp := strings.SplitN(value, ":", 2)
-	connector = tmp[0]
-	if len(tmp) > 1 {
-		address = tmp[1]
-	}
-	return
-}
-
 func usage() {
 	fmt.Fprintf(os.Stderr, "%s, Version: %s\n", APP, VERSION)
 	flag.PrintDefaults()
@@ -78,16 +69,17 @@ func main() {
 	flag.IntVar(&options.delay, "delay", 0, "Delay in millisecond to wait between I/O loop")
 
 	// Handlers
+	handle.Register(handle.NewStub())
 	handle.Register(base.NewBase32())
 	handle.Register(base.NewBase64())
 	handle.Register(handle.NewCipher())
 
 	// Connectors
-	connect.RegisterConnector(connect.NewConsoleConnector())
-	connect.RegisterConnector(connect.NewTcpConnector())
-	connect.RegisterConnector(connect.NewUdpConnector())
-	connect.RegisterConnector(connect.NewIcmpConnector())
-	connect.RegisterConnector(connect.NewDnsConnector())
+	connect.Register(connect.NewConsoleConnector())
+	connect.Register(connect.NewTcpConnector())
+	connect.Register(connect.NewUdpConnector())
+	connect.Register(connect.NewIcmpConnector())
+	connect.Register(connect.NewDnsConnector())
 
 	flag.Usage = usage
 	flag.Parse()
@@ -114,15 +106,13 @@ func main() {
 	}
 
 	if options.in != "" {
-		connector, address := parseInOutString(options.in)
-		if in, err = connect.MakeConnect(connector, true, options.inplain, address); err != nil {
+		if in, err = connect.MakeConnect(options.in, true, options.inplain); err != nil {
 			onError(err)
 		}
 	}
 
 	if options.out != "" {
-		connector, address := parseInOutString(options.out)
-		if out, err = connect.MakeConnect(connector, false, options.outplain, address); err != nil {
+		if out, err = connect.MakeConnect(options.out, false, options.outplain); err != nil {
 			onError(err)
 		}
 	}
