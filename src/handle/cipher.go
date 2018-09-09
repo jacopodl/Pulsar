@@ -10,7 +10,10 @@ import (
 	"time"
 )
 
-const DEFAULTCIPHER = "aes"
+const (
+	DEFAULTCIPHER = "aes"
+	VERIFYBLOCK   = 6
+)
 
 type cipherSt struct {
 	block cipher.Block
@@ -52,27 +55,74 @@ func (c *cipherSt) Init(options string) (Handler, error) {
 }
 
 func (c *cipherSt) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
-	buf, err := c.processCTR(buf[:length], decode)
-	return buf, len(buf), err
+
+	if !decode {
+		ciphertext, err := encryptCTR(buf[:length], c.block)
+		return ciphertext, len(ciphertext), err
+	}
+	plaintext, err := decryptCTR(buf[:length], c.block)
+	return plaintext, len(plaintext), err
 }
 
-func (c *cipherSt) processCTR(data []byte, decrypt bool) ([]byte, error) {
-	if !decrypt {
-		ciphertext := make([]byte, c.block.BlockSize()+len(data))
-		iv := ciphertext[:c.block.BlockSize()]
-		rand.Seed(time.Now().UnixNano())
-		if _, err := rand.Read(iv); err != nil {
-			return nil, err
-		}
-		stream := cipher.NewCTR(c.block, iv)
-		stream.XORKeyStream(ciphertext[c.block.BlockSize():], data)
-		return ciphertext, nil
+func encryptCTR(data []byte, block cipher.Block) ([]byte, error) {
+	var vblock []byte = nil
+	var err error = nil
+
+	ciphertext := make([]byte, block.BlockSize()+VERIFYBLOCK+len(data))
+
+	iv := ciphertext[:block.BlockSize()]
+
+	rand.Seed(time.Now().UnixNano())
+	if _, err = rand.Read(iv); err != nil {
+		return nil, err
 	}
-	plaintext := make([]byte, len(data)-c.block.BlockSize())
-	iv := data[:c.block.BlockSize()]
-	stream := cipher.NewCTR(c.block, iv)
-	stream.XORKeyStream(plaintext, data[c.block.BlockSize():])
-	return plaintext, nil
+
+	if vblock, err = mkKeyVerBlock(data, byte(block.BlockSize())); err != nil {
+		return nil, err
+	}
+
+	stream := cipher.NewCTR(block, iv)
+	stream.XORKeyStream(ciphertext[block.BlockSize():], vblock)
+	return ciphertext, nil
+}
+
+func decryptCTR(data []byte, block cipher.Block) ([]byte, error) {
+	plaintext := make([]byte, len(data)-block.BlockSize())
+	stream := cipher.NewCTR(block, data[:block.BlockSize()])
+	stream.XORKeyStream(plaintext, data[block.BlockSize():])
+
+	if !verifyKey(plaintext[:VERIFYBLOCK], byte(block.BlockSize())) {
+		return nil, fmt.Errorf("invalid algorithm or key")
+	}
+
+	return plaintext[VERIFYBLOCK:], nil
+}
+
+func mkKeyVerBlock(data []byte, blocksize byte) ([]byte, error) {
+	block := make([]byte, VERIFYBLOCK)
+	rand.Seed(time.Now().UnixNano())
+	if _, err := rand.Read(block); err != nil {
+		return nil, err
+	}
+
+	//   |0|1|2|3|4|5|
+	// 1) ^-------^ <-----cipher block size
+	// 2)     ^-----^
+	// 3)   ^---^
+
+	// 1
+	block[0] = blocksize
+	block[4] = block[0]
+	// 2
+	block[2] = block[5]
+	// 3
+	block[1] = block[3]
+
+	return append(block, data...), nil
+}
+
+func verifyKey(block []byte, blocksize byte) bool {
+	return blocksize == block[0] && block[0] == block[4] && block[2] == block[5] && block[1] == block[3]
 }
 
 func splitCipherOptions(options, defcipher string) (algo, key string) {
