@@ -25,14 +25,14 @@ func (c *cipherSt) Name() string {
 }
 
 func (c *cipherSt) Description() string {
-	return "CTR cipher - cipher:key|[aes|des|tdes#key]"
+	return "CTR cipher - key|[aes|des|tdes#key]"
 }
 
 func (c *cipherSt) Init(options string) (Handler, error) {
 	var hcipher = cipherSt{}
 	var err error = nil
 
-	algo, key := splitCipherOptions(options)
+	algo, key := splitCipherOptions(options, DEFAULTCIPHER)
 	switch algo {
 	case "aes":
 		hcipher.block, err = aes.NewCipher([]byte(key))
@@ -75,14 +75,14 @@ func (c *cipherSt) processCTR(data []byte, decrypt bool) ([]byte, error) {
 	return plaintext, nil
 }
 
-func splitCipherOptions(options string) (algo, key string) {
+func splitCipherOptions(options, defcipher string) (algo, key string) {
 	split := strings.SplitN(options, "#", 2)
 	if len(split) > 1 {
 		algo = split[0]
 		key = split[1]
 		return
 	}
-	algo = DEFAULTCIPHER
+	algo = defcipher
 	key = split[0]
 	return
 }

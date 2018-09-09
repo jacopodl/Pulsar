@@ -8,8 +8,8 @@ import (
 const HOPTIONSEP = ":"
 
 var (
-	Handlers            = map[string]Handler{}
-	hchain   []*Handler = nil
+	Handlers           = map[string]Handler{}
+	hchain   []Handler = nil
 )
 
 func Register(handler Handler) error {
@@ -29,7 +29,7 @@ func MakeChain(hnames []string) error {
 			if handler, err = handler.Init(hopts); err != nil {
 				return err
 			}
-			hchain = append(hchain, &handler)
+			hchain = append(hchain, handler)
 			continue
 		}
 		return fmt.Errorf("handle %s not exists", hname)
@@ -40,7 +40,7 @@ func MakeChain(hnames []string) error {
 func Process(buf []byte, length int, decode bool) ([]byte, int, error) {
 	var err error = nil
 	for _, handler := range hchain {
-		if buf, length, err = (*handler).Process(buf, length, decode); err != nil || length == 0 {
+		if buf, length, err = handler.Process(buf, length, decode); err != nil || length == 0 {
 			buf = nil
 			length = 0
 			break
