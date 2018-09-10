@@ -151,7 +151,7 @@ func mkRandom(data []byte) error {
 
 func mkKeyVerBlock(data []byte, blksize byte) ([]byte, error) {
 	block := make([]byte, VERIFYBLOCK)
-	if err := mkRandom(data); err != nil {
+	if err := mkRandom(block); err != nil {
 		return nil, err
 	}
 
