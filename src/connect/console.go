@@ -2,20 +2,13 @@ package connect
 
 import (
 	"os"
-	"time"
 )
 
 const CLICHUNK = 4096
 
-type clidata struct {
-	length int
-	buf    []byte
-	err    error
-}
-
 type console struct {
 	*ConnectorStats
-	data   chan clidata
+	buf    []byte
 	closed bool
 }
 
@@ -36,20 +29,7 @@ func (c *console) Stats() *ConnectorStats {
 }
 
 func (c *console) Connect(listen, plain bool, address string) (Connector, error) {
-	cli := console{&ConnectorStats{}, make(chan clidata), false}
-
-	go func() {
-		for {
-			buf := make([]byte, CLICHUNK)
-			length, err := os.Stdin.Read(buf)
-			cli.data <- clidata{length, buf, err}
-			if err != nil || cli.closed {
-				return
-			}
-		}
-	}()
-
-	return &cli, nil
+	return &console{&ConnectorStats{}, make([]byte, CLICHUNK), false}, nil
 }
 
 func (c *console) Close() {
@@ -57,17 +37,12 @@ func (c *console) Close() {
 }
 
 func (c *console) Read() ([]byte, int, error) {
-	for {
-		select {
-		case data := <-c.data:
-			c.recv += data.length
-			return data.buf, data.length, data.err
-		case <-time.After(10 * time.Millisecond):
-			if c.closed {
-				return nil, 0, nil
-			}
-		}
+	if c.closed {
+		return nil, 0, nil
 	}
+	length, err := os.Stdin.Read(c.buf)
+	c.recv += length
+	return c.buf, length, err
 }
 
 func (c *console) Write(buf []byte, length int) (int, error) {
