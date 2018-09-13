@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	APP     = "Pulsar"
+	// APP     = "Pulsar"
 	VERSION = "1.0.0"
 	LOGO    = `
 .______    __    __   __          _______.     ___      .______
@@ -40,7 +40,7 @@ type Options struct {
 }
 
 func onError(err error) {
-	fmt.Fprint(os.Stderr, err.Error())
+	fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 	os.Exit(-1)
 }
 
