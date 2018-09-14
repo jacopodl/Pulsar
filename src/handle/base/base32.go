@@ -6,7 +6,7 @@ import (
 )
 
 type base32 struct {
-	buffer []byte
+	encoder *BEncoder
 }
 
 func NewBase32() handle.Handler {
@@ -22,38 +22,16 @@ func (b *base32) Description() string {
 }
 
 func (b *base32) Init(options string) (handle.Handler, error) {
-	return NewBase32(), nil
+	return &base32{NewBEncoder(b32.StdEncoding, 8, b32.StdPadding)}, nil
 }
 
 func (b *base32) Process(buf []byte, length int, decode bool) ([]byte, int, error) {
-	var ready []byte = nil
-	var prev = 0
+	var err error = nil
 
 	if !decode {
-		encoded := []byte(b32.StdEncoding.EncodeToString(buf[:length]))
+		encoded := b.encoder.encode(buf[:length])
 		return encoded, len(encoded), nil
 	}
-
-	if b.buffer != nil {
-		b.buffer = append(b.buffer, buf[:length]...)
-		buf = b.buffer
-		length = len(buf)
-		b.buffer = nil
-	}
-
-	for prev != length {
-		chunk, ok := SplitInputBuffer(buf[prev:], 8, byte(b32.StdPadding))
-		if !ok {
-			b.buffer = append(b.buffer, buf[prev:prev+chunk]...)
-			break
-		}
-		decoded, err := b32.StdEncoding.DecodeString(string(buf[prev : prev+chunk]))
-		if err != nil {
-			b.buffer = nil
-			return nil, 0, err
-		}
-		ready = append(ready, decoded...)
-		prev += chunk
-	}
-	return ready, len(ready), nil
+	buf, length, err = b.encoder.decode(buf[:length])
+	return buf, length, err
 }
