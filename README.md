@@ -1,3 +1,7 @@
+![](https://img.shields.io/badge/Language-Go-orange.svg)
+![](https://img.shields.io/badge/version-1.0.0-green.svg)
+[![GPLv3 License](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0.html)
+
 # Pulsar
 Pulsar is a tool for data exfiltration and covert communication that enable you to create a secure data transfer, 
 a bizarre chat or a network tunnel through different protocols, for example you can receive data from tcp connection 
@@ -5,13 +9,9 @@ and resend it to real destination through DNS packets :tada:
 
 # Setting up Pulsar :hammer:
 
-First, getting the code from repository:
-
-    $ git clone https://github.com/jacopodl/pulsar
-    
 :warning: **Make sure you have at least Go 1.8 in your system to build Pulsar** :warning:
 
-Compile it with following command:
+First, getting the code from repository and compile it with following command:
 
     $ cd pulsar
     $ export GOPATH=$(shell pwd)
