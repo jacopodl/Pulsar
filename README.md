@@ -47,6 +47,29 @@ You can use option --in in order to select input connector and option --out to s
         
         --in tcp:127.0.0.1:9000
         --out dns:fkdns.lol:2.3.4.5:8989
+        
+
+# Handlers :wrench:
+A handler allows you to change data in transit, you can combine handlers arbitrarily.
+* Stub:
+    - Default, do nothing, pass through
+
+* Base32
+    - Base32 encoder/decoder
+    
+            --handlers base32
+* Base64
+    - Base64 encoder/decoder
+    
+            --handlers base64
+* Cipher
+    - CTR cipher, support AES/DES/TDES in CTR mode (Default: AES)
+    
+            --handlers cipher:<key|[aes|des|tdes#key]>
+
+You can use the --decode option to use *ALL* handlers in decoding mode
+        
+        --handlers base64,base32,base64,cipher:key --decode
 
 # Example
 In the following example Pulsar will be used to create a secure two-way tunnel on DNS protocol, data will be read from TCP connection (simple nc client) and resend encrypted through the tunnel.
@@ -63,3 +86,5 @@ In the following example Pulsar will be used to create a secure two-way tunnel o
     $ nc -l 127.0.0.1 -p 9900
     $ ./pulsar --in dns:test.org@192.168.1.199:8989 --out tcp:127.0.0.1:9900 --duplex --plain out --handlers 'cipher:supersekretkey!!' --decode
 
+# Contribute
+All contributions are always welcome
