@@ -1,6 +1,7 @@
 ![](https://img.shields.io/badge/Language-Go-orange.svg)
 ![](https://img.shields.io/badge/version-1.0.0-green.svg)
 [![GPLv3 License](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0.html)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jacopodl_Pulsar&metric=alert_status)](https://sonarcloud.io/dashboard?id=jacopodl_Pulsar)
 
 # Pulsar
 Pulsar is a tool for data exfiltration and covert communication that enable you to create a secure data transfer, 
