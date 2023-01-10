@@ -1,12 +1,12 @@
 package connect
 
 import (
-	dproto "connect/proto/dns"
+	dproto "pulsar/src/connect/proto/dns"
 	"encoding/base32"
 	"fmt"
 	"net"
 	"os"
-	"packet"
+	"pulsar/src/packet"
 	"strings"
 )
 

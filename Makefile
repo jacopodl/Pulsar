@@ -1,12 +1,10 @@
 GOCMD=go
 GOBUILD=$(GOCMD) build
-GOGET=$(GOCMD) get
+GOMOD=$(GOCMD) mod
 
 # Binary
 BIN_FOLDER=$(shell pwd)/bin
 BIN_NAME=$(shell basename "$(PWD)")
-
-export GOPATH=$(shell pwd)
 
 pulsar: deps
 	@echo "Building $(BIN_NAME)..."
@@ -15,7 +13,7 @@ pulsar: deps
 
 deps:
 	@echo "Downloading dependencies..."
-	@$(GOGET) golang.org/x/net/icmp
+	@$(GOMOD) download
 	@echo "Done"
 
 clean:

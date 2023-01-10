@@ -3,7 +3,7 @@ package connect
 import (
 	"net"
 	"os"
-	"packet"
+	"pulsar/src/packet"
 )
 
 const UDPCHUNK = 384
