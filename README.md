@@ -15,8 +15,6 @@ and resend it to real destination through DNS packets :tada:
 First, getting the code from repository and compile it with following command:
 
     $ cd pulsar
-    $ export GOPATH=$(shell pwd)
-    $ go get golang.org/x/net/icmp
     $ go build -o bin/pulsar src/main.go
 
 or run:
